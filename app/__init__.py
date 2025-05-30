@@ -19,8 +19,8 @@ from app.routers.auth import router as auth_router
 
 
 api_version = "v1"
-swagger_docs_url = f"api/{api_version}/docs"
-redoc_docs_url = f"api/{api_version}/redoc"
+swagger_docs_url = f"/api/{api_version}/docs"
+redoc_docs_url = f"/api/{api_version}/redoc"
 
 
 app = FastAPI(
