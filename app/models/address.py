@@ -2,13 +2,8 @@ from sqlalchemy import Boolean, Column, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 import enum
 
-from app.models.base import Base, TimeStampMixin
-
-
-class AddressType(str, enum.Enum):
-    BILLING = "billing"
-    SHIPPING = "shipping"
-    BOTH = "both"
+from ..models.base import Base, TimeStampMixin
+from ..enums import AddressType
 
 
 class Address(Base, TimeStampMixin):
