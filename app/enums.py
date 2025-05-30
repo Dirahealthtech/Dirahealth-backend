@@ -2,7 +2,7 @@ import enum
 
 
 class UserRole(str, enum.Enum):
-    CUSTOMER = "ustomer"
+    CUSTOMER = "customer"
     ADMIN = "admin"
     SERVICE_TECH = "service_tech"
     SUPPLIER = "supplier"
