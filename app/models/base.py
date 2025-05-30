@@ -1,9 +1,12 @@
 from sqlalchemy import Column, DateTime
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
 
+from ..db.database import Base
 
-Base = declarative_base()
+# Alias for the SQLAlchemy declarative base, for consistent imports across the app
+# Instead of importing Base from sqlalchemy.ext.declarative, we import it from our database module and
+# initialize it here.
+Base = Base
 
 
 class TimeStampMixin:
