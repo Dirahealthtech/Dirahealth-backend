@@ -3,14 +3,21 @@ from typing import Optional
 
 
 class Settings(BaseSettings):
+    """
+    Settings class to retrieve environment variables.
+    """
+
     DATABASE_URL: str
+    SECRET_KEY: str
     JWT_SECRET: str
     JWT_ALGORITHM: str
-    SECRET_KEY: str
-    DOMAIN: str
+    JTI_EXPIRY: int
+    ACCESS_TOKEN_EXPIRY: int
+    REFRESH_TOKEN_EXPIRY: int
     REDIS_HOST: str
     REDIS_PORT: int
     REDIS_PASSWORD: Optional[str] = None
+    DOMAIN: str     # localhost or production domain
     MAIL_USERNAME: str
     MAIL_PASSWORD: str
     MAIL_FROM: str
