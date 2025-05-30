@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.exceptions import (
     create_exception_handler,
@@ -15,6 +16,7 @@ from app.exceptions import (
     UsernameAlreadyExistsException,
     UserNotFoundException,
 )
+from app.middleware.auth_middleware import CustomAuthMiddleWare
 from app.routers.auth import router as auth_router
 
 
@@ -31,6 +33,15 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# add middleware
+app.add_middleware(CustomAuthMiddleWare)    # custom authentication middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=['http://localhost', 'http://localhost:3000',],
+    allow_credentials=True,
+    allow_methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allow_headers=["*"],
+)
 
 
 # register endpoints
