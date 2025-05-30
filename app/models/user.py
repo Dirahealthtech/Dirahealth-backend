@@ -1,16 +1,9 @@
 from sqlalchemy import Boolean, Column, String, Integer, Enum, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from datetime import datetime
-import enum
 
-from app.models.base import TimeStampMixin, Base
+from ..models.base import TimeStampMixin, Base
+from ..enums import UserRole
 
-
-class UserRole(str, enum.Enum):
-    CUSTOMER = "customer"
-    ADMIN = "admin"
-    SERVICE_TECH = "service_tech"
-    SUPPLIER = "supplier"
 
 class User(Base, TimeStampMixin):
     __tablename__ = "users"
