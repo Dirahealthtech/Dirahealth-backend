@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship
 from app.models.base import Base, TimeStampMixin
 
 
-class OrderService(Base):
+class OrderService(Base, TimeStampMixin):
     __tablename__ = "order_services"
 
     id = Column(Integer, primary_key=True, index=True)

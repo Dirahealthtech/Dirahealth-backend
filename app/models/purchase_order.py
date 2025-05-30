@@ -1,6 +1,7 @@
 from sqlalchemy import Column, String, Integer, DateTime, Float, ForeignKey
 from sqlalchemy.orm import relationship
 
+from app.models.base import Base, TimeStampMixin
 
 class PurchaseOrder(Base, TimeStampMixin):
     __tablename__ = "purchase_orders"

@@ -1,7 +1,10 @@
 from sqlalchemy import Column, Integer, Float, ForeignKey
 from sqlalchemy.orm import relationship
 
-class OrderItem(Base):
+from app.models.base import Base, TimeStampMixin
+
+
+class OrderItem(Base, TimeStampMixin):
     __tablename__ = "order_items"
 
     id = Column(Integer, primary_key=True, index=True)
