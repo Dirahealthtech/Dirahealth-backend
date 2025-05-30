@@ -2,8 +2,7 @@
 
 ## 1. Project Name
 
-**Dira Healthcare API**
-A powerful and scalable backend API for an eCommerce platform specializing in **prosthetic limbs** and other **medical devices**.
+**Dira Healthcare API** is a powerful and scalable backend API for an eCommerce platform specializing in **prosthetic limbs** and other **medical devices**.
 
 
 ## 2. Overview
@@ -129,9 +128,18 @@ To send emails securely using Gmail:
 
 1. Go to your [Google Account Security Settings](https://myaccount.google.com).
 2. In the search bar shown in the home tab, type "App passwords"
+
+   ![Screenshot from 2025-05-30 22-28-18](https://github.com/user-attachments/assets/02a442ff-9026-46ec-903b-2daf2b7c2453)
+
 3. Click **App passwords** under "Security", you'll be prompted to enter your password.
 4. Enter your app name in the form input shown below..
-5. Copy the 16-character password and use it as `EMAIL_PASSWORD` in your `.env`.
+
+  ![Screenshot from 2025-05-30 22-30-40](https://github.com/user-attachments/assets/65036369-4185-41b7-918c-298fbaea9a43)
+
+5. Copy the 16-character password, like the one shown in the image, and use it as `EMAIL_PASSWORD` in your `.env`.
+   ![Screenshot from 2025-05-30 22-31-23](https://github.com/user-attachments/assets/e8ff4acc-c4ef-414f-9256-7f5b140a6dde)
+
+6. You'll recieve an email notification for the generated app password.
 
 ---
 
