@@ -2,9 +2,9 @@ from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer
 from fastapi.security.http import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Any, List
+from typing import Any, AsyncGenerator, List
 
-from ..db.database import AsyncGenerator, AsyncSessionLocal
+from ..db.database import AsyncSessionLocal
 from ..db.redis import token_in_blacklist
 from ..models.user import User
 from ..services.auth_service import AuthService
