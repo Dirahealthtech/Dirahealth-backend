@@ -19,9 +19,13 @@ from app.routers.auth import router as auth_router
 
 
 api_version = "v1"
+swagger_docs_url = f"api/{api_version}/docs"
+redoc_docs_url = f"api/{api_version}/redoc"
 
 
 app = FastAPI(
+    docs_url=swagger_docs_url,
+    redoc_url=redoc_docs_url,
     title="Dira Healthcare API",
     description="This is an ecommerce platform API focused on the medical device industry.",
     version="1.0.0",
