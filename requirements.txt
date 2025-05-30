@@ -1,5 +1,6 @@
 aiofiles==24.1.0
 aiosmtplib==3.0.2
+aiosqlite==0.21.0
 alembic==1.16.1
 annotated-types==0.7.0
 anyio==4.9.0
@@ -25,6 +26,7 @@ pydantic_core==2.33.2
 PyJWT==2.10.1
 python-dotenv==1.1.0
 python-jose==3.5.0
+python-multipart==0.0.20
 redis==6.2.0
 rsa==4.9.1
 six==1.17.0
