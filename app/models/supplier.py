@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, Text, Boolean, Float, JSON, Enum
 from sqlalchemy.orm import relationship
+import enum
 
 from app.models.base import Base, TimeStampMixin
 
