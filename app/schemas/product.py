@@ -1,0 +1,70 @@
+from pydantic import BaseModel, Field, validator
+from typing import Optional, Dict, Any, List
+from datetime import datetime
+from ..enums import ProductType
+
+class ProductBase(BaseModel):
+    name: str
+    description: str
+    category_id: int
+    supplier_id: Optional[int] = None
+    product_type: ProductType
+    sku: str
+    price: float
+    discounted_price: Optional[float] = 0.0
+    tax_rate: Optional[float] = 0.0
+    stock: int = 0
+    requires_prescription: bool = False
+    is_active: bool = True
+    image_url: Optional[str] = None
+    weight: Optional[float] = None
+    dimensions: Optional[Dict[str, Any]] = None
+    specifications: Optional[Dict[str, Any]] = None
+    warranty_information: Optional[Dict[str, Any]] = None
+    meta_title: Optional[str] = None
+    meta_description: Optional[str] = None
+    meta_keywords: Optional[str] = None
+
+class ProductCreate(ProductBase):
+    pass
+
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    category_id: Optional[int] = None
+    supplier_id: Optional[int] = None
+    product_type: Optional[ProductType] = None
+    sku: Optional[str] = None
+    price: Optional[float] = None
+    discounted_price: Optional[float] = None
+    tax_rate: Optional[float] = None
+    stock: Optional[int] = None
+    requires_prescription: Optional[bool] = None
+    is_active: Optional[bool] = None
+    image_url: Optional[str] = None
+    weight: Optional[float] = None
+    dimensions: Optional[Dict[str, Any]] = None
+    specifications: Optional[Dict[str, Any]] = None
+    warranty_information: Optional[Dict[str, Any]] = None
+    meta_title: Optional[str] = None
+    meta_description: Optional[str] = None
+    meta_keywords: Optional[str] = None
+
+class ProductResponse(ProductBase):
+    id: int
+    slug: str
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class ProductListResponse(BaseModel):
+    items: List[ProductResponse]
+    total: int
+    page: int
+    size: int
+    pages: int
+    
+    class Config:
+        from_attributes = True
