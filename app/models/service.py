@@ -2,7 +2,8 @@ from sqlalchemy import Column, Integer, String, Text, Boolean, Float, ForeignKey
 from sqlalchemy.orm import relationship
 import enum
 
-from app.models.base import Base, TimeStampMixin
+from ..db.base import Base
+from app.models.base import TimeStampMixin
 
 # Many-to-many relationship table between services and technicians
 service_technician = Table(

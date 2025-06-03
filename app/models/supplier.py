@@ -2,12 +2,10 @@ from sqlalchemy import Column, Integer, String, Text, Boolean, Float, JSON, Enum
 from sqlalchemy.orm import relationship
 import enum
 
-from app.models.base import Base, TimeStampMixin
+from ..db.base import Base
+from ..enums import SupplierStatus
+from ..models.base import TimeStampMixin
 
-class SupplierStatus(str, enum.Enum):
-    ACTIVE = "active"
-    INACTIVE = "inactive"
-    PENDING = "pending"
 
 class Supplier(Base, TimeStampMixin):
     __tablename__ = "suppliers"

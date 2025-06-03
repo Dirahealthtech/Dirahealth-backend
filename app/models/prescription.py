@@ -2,7 +2,8 @@ from datetime import datetime, timezone
 from sqlalchemy import Column, DateTime, Integer, String, ForeignKey, Text
 from sqlalchemy.orm import relationship
 
-from ..models.base import Base, TimeStampMixin
+from ..db.base import Base
+from ..models.base import TimeStampMixin
 
 
 class Prescription(Base, TimeStampMixin):
