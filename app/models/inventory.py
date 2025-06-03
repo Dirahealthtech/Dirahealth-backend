@@ -1,22 +1,10 @@
+from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, Float, ForeignKey, DateTime, Enum
 from sqlalchemy.orm import relationship
-import enum
-from datetime import datetime
 
-from app.models.base import Base, TimeStampMixin
+from ..enums import ReferenceModel, TransactionType
+from ..models.base import Base, TimeStampMixin
 
-class TransactionType(str, enum.Enum):
-    PURCHASE = "purchase"
-    SALE = "sale"
-    RETURN = "return"
-    ADJUSTMENT = "adjustment"
-    WRITE_OFF = "write_off"
-    TRANSFER = "transfer"
-
-class ReferenceModel(str, enum.Enum):
-    ORDER = "Order"
-    PURCHASE_ORDER = "PurchaseOrder"
-    STOCK_ADJUSTMENT = "StockAdjustment"
 
 class InventoryTransaction(Base, TimeStampMixin):
     __tablename__ = "inventory_transactions"

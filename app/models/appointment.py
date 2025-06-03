@@ -1,31 +1,11 @@
+from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, JSON, Boolean, Float, ForeignKey, DateTime, Enum
 from sqlalchemy.orm import relationship
 import enum
-from datetime import datetime
 
-from app.models.base import Base, TimeStampMixin
+from ..enums import AppointmentStatus, LocationType, PaymentStatus
+from ..models.base import Base, TimeStampMixin
 
-class AppointmentStatus(str, enum.Enum):
-    PENDING = "pending"
-    CONFIRMED = "confirmed"
-    IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
-    RESCHEDULED = "rescheduled"
-
-class LocationType(str, enum.Enum):
-    ON_SITE = "on_site"
-    CUSTOMER_LOCATION = "customer_location"
-
-class PaymentStatus(str, enum.Enum):
-    PENDING = "pending"
-    PAID = "paid"
-    REFUNDED = "refunded"
-    FAILED = "failed"
-
-class ReminderMethod(str, enum.Enum):
-    EMAIL = "email"
-    SMS = "sms"
 
 class Appointment(Base, TimeStampMixin):
     __tablename__ = "appointments"

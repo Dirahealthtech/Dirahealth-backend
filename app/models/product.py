@@ -1,25 +1,11 @@
 from sqlalchemy import Column, Integer, String, Text, Boolean, Float, ForeignKey, JSON, Enum
 from sqlalchemy.orm import relationship
-import enum
-
-from app.models.base import Base, TimeStampMixin
 
 
-class ProductType(str, enum.Enum):
-    HOSPITAL_EQUIPMENT = "hospital_equipment"
-    UPPER_LIMB_DEVICE = "upper_limb_device"
-    LOWER_LIMB_DEVICE = "lower_limb_device"
-    ACCESSORY = "accessory"
-    CONSUMABLE = "consumable"
+from ..enums import ProductType, WarrantyUnit
+from ..models.base import Base, TimeStampMixin
 
-class DimensionUnit(str, enum.Enum):
-    CM = "cm"
-    INCH = "inch"
 
-class WarrantyUnit(str, enum.Enum):
-    DAYS = "days"
-    MONTHS = "months"
-    YEARS = "years"
 
 class Product(Base, TimeStampMixin):
     __tablename__ = "products"

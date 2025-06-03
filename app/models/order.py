@@ -1,29 +1,11 @@
+from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, Boolean, Float, ForeignKey, DateTime, Enum, JSON
 from sqlalchemy.orm import relationship
-import enum
-from datetime import datetime
 
-from app.models.base import Base, TimeStampMixin
 
-class OrderStatus(str, enum.Enum):
-    PENDING = "pending"
-    PROCESSING = "processing"
-    SHIPPED = "shipped"
-    DELIVERED = "delivered"
-    CANCELLED = "cancelled"
-    REFUNDED = "refunded"
+from ..enums import OrderStatus, PaymentMethod, PaymentStatus
+from ..models.base import Base, TimeStampMixin
 
-class PaymentMethod(str, enum.Enum):
-    MPESA = "mpesa"
-    CARD = "card"
-    BANK_TRANSFER = "bank_transfer"
-    CASH = "cash"
-
-class PaymentStatus(str, enum.Enum):
-    PENDING = "pending"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    REFUNDED = "refunded"
 
 class Order(Base, TimeStampMixin):
     __tablename__ = "orders"
