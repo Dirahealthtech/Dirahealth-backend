@@ -2,9 +2,9 @@ from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, Boolean, Float, ForeignKey, DateTime, Enum, JSON
 from sqlalchemy.orm import relationship
 
-
+from ..db.base import Base
 from ..enums import OrderStatus, PaymentMethod, PaymentStatus
-from ..models.base import Base, TimeStampMixin
+from ..models.base import TimeStampMixin
 
 
 class Order(Base, TimeStampMixin):

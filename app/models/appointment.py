@@ -1,8 +1,8 @@
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, JSON, Boolean, Float, ForeignKey, DateTime, Enum
 from sqlalchemy.orm import relationship
-import enum
 
+from ..db.base import Base
 from ..enums import AppointmentStatus, LocationType, PaymentStatus
 from ..models.base import Base, TimeStampMixin
 

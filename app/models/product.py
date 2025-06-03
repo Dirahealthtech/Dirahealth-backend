@@ -1,9 +1,9 @@
 from sqlalchemy import Column, Integer, String, Text, Boolean, Float, ForeignKey, JSON, Enum
 from sqlalchemy.orm import relationship
 
-
+from ..db.base import Base
 from ..enums import ProductType, WarrantyUnit
-from ..models.base import Base, TimeStampMixin
+from ..models.base import TimeStampMixin
 
 
 

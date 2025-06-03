@@ -1,8 +1,9 @@
 from sqlalchemy import Column, Integer, String, Text, Boolean, Float, JSON, Enum
 from sqlalchemy.orm import relationship
 
+from ..db.base import Base
 from ..enums import SupplierStatus
-from app.models.base import Base, TimeStampMixin
+from ..models.base import TimeStampMixin
 
 
 class Supplier(Base, TimeStampMixin):

@@ -2,8 +2,9 @@ from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, Float, ForeignKey, DateTime, Enum
 from sqlalchemy.orm import relationship
 
+from ..db.base import Base
 from ..enums import ReferenceModel, TransactionType
-from ..models.base import Base, TimeStampMixin
+from ..models.base import TimeStampMixin
 
 
 class InventoryTransaction(Base, TimeStampMixin):

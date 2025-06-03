@@ -2,7 +2,8 @@ from sqlalchemy import Boolean, Column, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 import enum
 
-from ..models.base import Base, TimeStampMixin
+from ..db.base import Base
+from ..models.base import TimeStampMixin
 from ..enums import AddressType
 
 

@@ -1,7 +1,8 @@
 from sqlalchemy import Boolean, Column, DateTime, Enum, Integer, String
 from sqlalchemy.orm import relationship
 
-from ..models.base import TimeStampMixin, Base
+from ..db.base import Base
+from ..models.base import TimeStampMixin
 from ..enums import UserRole
 
 
