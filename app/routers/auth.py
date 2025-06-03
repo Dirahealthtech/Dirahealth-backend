@@ -136,7 +136,7 @@ async def create_user(
     # Create an account for the user
     new_user = await auth_service.create_user_account(user, db)
     user_name = f"{user.first_name} {user.last_name}"
-    print(f"New_user.email: {new_user.email}, type: {type(new_user.email)} | User email: {user.email}, type: {type(new_user.email)}")
+    
     # email verification
     private_key = create_url_safe_token({"email": user.email})
     email_verification_link = f"{Config.DOMAIN}/api/v1/auth/verify-account/{private_key}"

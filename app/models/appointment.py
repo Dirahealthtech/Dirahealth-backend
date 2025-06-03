@@ -4,7 +4,6 @@ from sqlalchemy.orm import relationship
 
 from ..db.base import Base
 from ..enums import AppointmentStatus, LocationType, PaymentStatus
-from ..db.base import Base
 from ..models.base import TimeStampMixin
 
 

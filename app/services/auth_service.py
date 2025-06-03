@@ -24,9 +24,6 @@ class AuthService:
         stmt = select(User).where(User.email==email)
         user = (await db.execute(stmt)).scalars().first()
 
-        if not user:
-            raise exceptions.UserNotFoundException()
-
         return user
 
 
