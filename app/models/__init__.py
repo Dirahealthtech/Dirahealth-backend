@@ -14,6 +14,9 @@ from .purchase_order_item import PurchaseOrderItem
 from .purchase_order import PurchaseOrder
 from .service import Service
 from .supplier import Supplier
+from .cart_item import CartItem
+from .cart import Cart
+from .cart_service_item import CartServiceItem
 
 
 __all__ = [
@@ -33,5 +36,8 @@ __all__ = [
     "PurchaseOrder",
     "Service",
     "Supplier",
-    "InventoryTransaction"
+    "InventoryTransaction",
+    "CartItem",
+    "Cart",
+    "CartServiceItem"
 ]
