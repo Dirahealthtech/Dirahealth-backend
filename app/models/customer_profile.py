@@ -1,15 +1,9 @@
-from sqlalchemy import Column, Integer, String, Enum, ForeignKey, Text, JSON
+from sqlalchemy import Column, Integer, String, Enum, ForeignKey, JSON
 from sqlalchemy.orm import relationship
-import enum
 
-from app.models.base import Base
+from ..models.base import Base
+from ..enums import CustomerType
 
-
-
-class CustomerType(str, enum.Enum):
-    INDIVIDUAL = "individual"
-    HOSPITAL = "hospital"
-    HEALTHCARE_PROVIDER = "healthcare_provider"
 
 class CustomerProfile(Base):
     __tablename__ = "customer_profiles"

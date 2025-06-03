@@ -1,0 +1,15 @@
+# virtual environment
+*venv
+
+# environment variables
+*.env
+
+
+# Python bytecode
+*__pycache__
+
+# IDE directories
+.vscode
+.idea
+.qodo
+

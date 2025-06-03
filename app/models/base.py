@@ -1,8 +1,13 @@
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, DateTime
 from sqlalchemy.sql import func
 
+from ..db.database import Base
 
-Base = declarative_base()
+# Alias for the SQLAlchemy declarative base, for consistent imports across the app
+# Instead of importing Base from sqlalchemy.ext.declarative, we import it from our database module and
+# initialize it here.
+Base = Base
+
 
 class TimeStampMixin:
     """
@@ -13,9 +18,9 @@ class TimeStampMixin:
         - `updated_at`: Automatically set to the current time when the record is created,
            and automatically updated when the record is updated.
     """
- 
+
     # Automatically set on insert using the database's current timestamp
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    
+
     # Automatically set on insert AND updated on any update
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
