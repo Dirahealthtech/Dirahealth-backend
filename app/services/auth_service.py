@@ -8,6 +8,7 @@ from .. import exceptions
 from ..models import User
 from ..schemas import CreateUser
 from ..utils.auth import hash_password
+from ..enums import UserRole
 
 
 class AuthService:
@@ -88,3 +89,35 @@ class AuthService:
 
         await session.commit()
         return user
+
+
+    async def create_admin_user(self, user: CreateUser, role: UserRole, db: AsyncSession):
+        """
+        Create a user with a specific role (admin function)
+        """
+        user_email = user.email.lower()
+        
+        # Check if user already exists
+        user_exists = await self.user_exists(user_email, db)
+        if user_exists:
+            raise exceptions.UserAlreadyExistsException()
+        hashed_password = hash_password(user.password)
+        
+        new_user = User(
+            email=user_email,
+            hashed_password=hashed_password,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            phone_number=user.phone_number,
+            role=role,
+            is_verified=True
+        )
+        
+        try:
+            db.add(new_user)
+            await db.commit()
+            await db.refresh(new_user)
+            return new_user
+        except IntegrityError:
+            await db.rollback()
+            raise exceptions.UserAlreadyExistsException()
