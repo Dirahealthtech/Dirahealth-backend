@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship
 
 from ..db.base import Base
 from ..enums import AppointmentStatus, LocationType, PaymentStatus
-from ..models.base import Base, TimeStampMixin
+from ..models.base import TimeStampMixin
 
 
 class Appointment(Base, TimeStampMixin):

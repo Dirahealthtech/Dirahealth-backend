@@ -39,4 +39,4 @@ class Product(Base, TimeStampMixin):
     manufacturer = relationship("Supplier", back_populates="products")
     inventory_transactions = relationship("InventoryTransaction", back_populates="product")
     order_items = relationship("OrderItem", back_populates="product")
-    cart_items = relationship("CartItem", back_populates="product")
+    # cart_items = relationship("CartItem", back_populates="product")
