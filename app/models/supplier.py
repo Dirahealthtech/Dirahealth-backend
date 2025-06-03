@@ -25,5 +25,5 @@ class Supplier(Base, TimeStampMixin):
     status = Column(Enum(SupplierStatus), default=SupplierStatus.ACTIVE)
 
     # Relationships
-    products = relationship("Product", back_populates="manufacturer")
+    products = relationship("Product", back_populates="supplier")
     purchase_orders = relationship("PurchaseOrder", back_populates="supplier")
