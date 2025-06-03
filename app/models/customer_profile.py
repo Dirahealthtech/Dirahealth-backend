@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Enum, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 
-from ..models.base import Base
+from ..db.base import Base
 from ..enums import CustomerType
 
 

@@ -1,6 +1,7 @@
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from .base import Base
 from ..core.config import Config
 
 
@@ -8,7 +9,6 @@ DATABASE_URL = Config.DATABASE_URL
 
 engine = create_async_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 AsyncSessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
-Base = declarative_base()
 
 
 async def init_db():
