@@ -2,6 +2,8 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any, AsyncGenerator, List
 
+from ..enums import UserRole
+from ..exceptions import ForbiddenException
 from ..core.token_bearer import AccessTokenBearer
 from ..db.database import AsyncSessionLocal
 from ..models.user import User
@@ -85,3 +87,10 @@ class RoleChecker:
             status_code=403,
             detail=f"You don't have the required role to access this endpoint!"
         )
+
+
+def get_current_admin(user: User = Depends(get_current_user)) -> User:
+    if not user.role == UserRole.ADMIN:
+        raise ForbiddenException(detail="Only admins can access this resource!")
+
+    return user
