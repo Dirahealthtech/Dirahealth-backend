@@ -5,4 +5,4 @@ from .auth_schema import (
     RequestEmailVerificationSchema,
     ResetPasswordSchema,
 )
-from .user_schema import BaseUser, CreateUser, CreatedUserResponse, UserResponse
+from .user_schema import BaseUser, CreateUser, CreatedUserResponse, UserResponse, CreateAdminUser

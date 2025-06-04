@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, Float, JSON, Enum
+from sqlalchemy import Column, ForeignKey, Integer, String, Text, Boolean, Float, JSON, Enum
 from sqlalchemy.orm import relationship
+import enum
 
 from ..db.base import Base
 from ..enums import SupplierStatus
@@ -10,6 +11,7 @@ class Supplier(Base, TimeStampMixin):
     __tablename__ = "suppliers"
 
     id = Column(Integer, primary_key=True, index=True)
+    admin_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name = Column(String, nullable=False)
     contact_person = Column(JSON, nullable=True)  # Stores name, email, phone, position
     email = Column(String, nullable=False, unique=True)
@@ -24,5 +26,6 @@ class Supplier(Base, TimeStampMixin):
     status = Column(Enum(SupplierStatus), default=SupplierStatus.ACTIVE)
 
     # Relationships
-    products = relationship("Product", back_populates="manufacturer")
+    products = relationship("Product", back_populates="supplier")
     purchase_orders = relationship("PurchaseOrder", back_populates="supplier")
+    admin = relationship("User", back_populates="suppliers")

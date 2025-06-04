@@ -290,7 +290,7 @@ async def refresh_token(token_data: dict = Depends(RefreshTokenBearer())):
             }
         )
 
-    raise exceptions.InvalidTokenException()
+    raise exceptions.RefreshTokenRequiredException()
 
 
 @router.get('/user/me', dependencies=[user_role], response_model=UserResponse)

@@ -41,3 +41,12 @@ class UserResponse(BaseUser):
     id: int
     is_verified: bool
 
+class BaseAdminUser(BaseModel):
+    first_name: str
+    last_name: str
+    email: EmailStr
+    phone_number: validated_mobile_num
+    password: str = Field(min_length=8)
+
+class CreateAdminUser(BaseAdminUser):
+    pass

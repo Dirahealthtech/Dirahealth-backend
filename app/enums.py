@@ -102,3 +102,17 @@ class SupplierStatus(str, enum.Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"
     PENDING = "pending"
+
+
+class ServiceType(str, enum.Enum):
+    REPAIR = "repair"
+    MAINTENANCE = "maintenance"
+    CONSULTATION = "consultation"
+    INSTALLATION = "installation"
+    TRAINING = "training"
+
+class DeviceType(str, enum.Enum):
+    UPPER_LIMB = "upper_limb"
+    LOWER_LIMB = "lower_limb"
+    HOSPITAL_EQUIPMENT = "hospital_equipment"
+    GENERAL = "general"

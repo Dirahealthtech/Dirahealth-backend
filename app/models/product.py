@@ -15,6 +15,7 @@ class Product(Base, TimeStampMixin):
     slug = Column(String, nullable=False, unique=True, index=True)
     description = Column(Text, nullable=False)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=False)
+    supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=True)
     product_type = Column(Enum(ProductType), nullable=False)
     sku = Column(String, nullable=False, unique=True)
     price = Column(Float, nullable=False)
@@ -25,7 +26,6 @@ class Product(Base, TimeStampMixin):
     specifications = Column(JSON)  # Stores specifications as key-value pairs
     requires_prescription = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
-    manufacturer_id = Column(Integer, ForeignKey("suppliers.id"), nullable=True)
     weight = Column(Float, nullable=True)
     dimensions = Column(JSON, nullable=True)  # Stores length, width, height and unit
     tags = Column(JSON, nullable=True)  # Stores array of tag strings
@@ -36,7 +36,7 @@ class Product(Base, TimeStampMixin):
 
     # Relationships
     category = relationship("Category", back_populates="products")
-    manufacturer = relationship("Supplier", back_populates="products")
     inventory_transactions = relationship("InventoryTransaction", back_populates="product")
+    supplier = relationship("Supplier", back_populates="products")
     order_items = relationship("OrderItem", back_populates="product")
-    # cart_items = relationship("CartItem", back_populates="product")
+    cart_items = relationship("CartItem", back_populates="product")
