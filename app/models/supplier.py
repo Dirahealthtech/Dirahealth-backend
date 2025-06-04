@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, Text, Boolean, Float, JSON, Enum
 from sqlalchemy.orm import relationship
+import enum
 
 from ..db.base import Base
 from ..enums import SupplierStatus
@@ -24,5 +25,5 @@ class Supplier(Base, TimeStampMixin):
     status = Column(Enum(SupplierStatus), default=SupplierStatus.ACTIVE)
 
     # Relationships
-    products = relationship("Product", back_populates="manufacturer")
+    products = relationship("Product", back_populates="supplier")
     purchase_orders = relationship("PurchaseOrder", back_populates="supplier")

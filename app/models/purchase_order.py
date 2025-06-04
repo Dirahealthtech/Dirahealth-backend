@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from sqlalchemy import Column, String, Integer, DateTime, Float, ForeignKey, Text
 from sqlalchemy.orm import relationship
+from datetime import datetime
 
 from ..db.base import Base
 from app.models.base import TimeStampMixin
