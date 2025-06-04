@@ -26,3 +26,4 @@ class User(Base, TimeStampMixin):
     cart = relationship("Cart", back_populates="customer", uselist=False)
     appointments = relationship("Appointment", foreign_keys="Appointment.customer_id", back_populates="customer")
     technician_appointments = relationship("Appointment", foreign_keys="Appointment.technician_id", back_populates="technician")
+    suppliers = relationship("Supplier", back_populates="admin", cascade="all, delete-orphan")
