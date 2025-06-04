@@ -68,6 +68,26 @@ class PasswordsDontMatchException(APIException):
     pass
 
 
+class SupplierExistsException(APIException):
+    """ Exception is raised if the admin adds duplicate supplier. """
+    pass
+
+
+class SupplierNotFoundException(APIException):
+    """ Excpetion is raised if a supplier record is not found. """
+    pass
+
+
+class CannotUpdateSupplierProfile(APIException):
+    """ Exception raised when the current user tries to update a supplier they didn't create. """
+    pass
+
+
+class CannotDeleteSupplier(APIException):
+    """ Exception raised when the current user tries to update a supplier they didn't create. """
+    pass
+
+
 class NotFoundException(HTTPException):
     def __init__(self, detail: str = "Resource not found"):
         super().__init__(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
