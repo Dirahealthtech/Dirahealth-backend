@@ -5,6 +5,8 @@ from app.exceptions import (
     create_exception_handler,
     AccessTokenRequiredException,
     AccountNotVerifiedException,
+    CannotDeleteSupplier,
+    CannotUpdateSupplierProfile,
     InvalidTokenException,
     InvalidUserCredentialsException,
     PasswordsDontMatchException,
@@ -12,6 +14,8 @@ from app.exceptions import (
     PermissionRequiredException,
     RefreshTokenRequiredException,
     RevokedTokenException,
+    SupplierExistsException,
+    SupplierNotFoundException,
     UserAlreadyExistsException,
     UsernameAlreadyExistsException,
     UserNotFoundException,
@@ -69,3 +73,10 @@ app.add_exception_handler(PasswordIsShortException, create_exception_handler(400
 app.add_exception_handler(UserAlreadyExistsException, create_exception_handler(409, "User with this email exists!"))
 app.add_exception_handler(UsernameAlreadyExistsException, create_exception_handler(409, "The username is already taken!"))
 app.add_exception_handler(UserNotFoundException, create_exception_handler(404, "User not found."))
+
+
+# supplier-related exception handlers
+app.add_exception_handler(SupplierExistsException, create_exception_handler(409, "The supplier provided supplies your products!"))
+app.add_exception_handler(SupplierNotFoundException, create_exception_handler(404, "Supplier not found!"))
+app.add_exception_handler(CannotUpdateSupplierProfile, create_exception_handler(403, "You can't update a supplier who doesn't supply your products!"))
+app.add_exception_handler(CannotDeleteSupplier, create_exception_handler(403, "You can't delete a supplier who doesn't supply your products!"))
