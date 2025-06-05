@@ -23,7 +23,6 @@ class InventoryTransaction(Base, TimeStampMixin):
     total_cost = Column(Float, nullable=True)
     notes = Column(Text, nullable=True)
     performed_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
     product = relationship("Product", back_populates="inventory_transactions")
