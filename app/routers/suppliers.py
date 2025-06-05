@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, Path, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..core.dependencies import get_db, get_current_admin
+from ..core.dependencies import get_db, get_current_admin, RoleChecker
+from ..enums import UserRole
 from ..models import User
 from ..schemas.suppliers import CreateSupplier, SupplierResponse, UpdateSupplier
 from ..services.suppliers_service import SupplierService
@@ -9,13 +10,14 @@ from typing import List
 
 
 router = APIRouter()
+admins_only = Depends(RoleChecker([UserRole.ADMIN]))
 
 
 async def get_supplier_service(db: AsyncSession = Depends(get_db)) -> SupplierService:
     return SupplierService(db)
 
 
-@router.get('/', response_model=List[SupplierResponse])
+@router.get('/', dependencies=[admins_only], response_model=List[SupplierResponse])
 async def get_all_suppliers(
     service: SupplierService = Depends(get_supplier_service),
     current_user: User = Depends(get_current_admin),
@@ -23,7 +25,7 @@ async def get_all_suppliers(
     return await service.list_suppliers(current_user)
 
 
-@router.get('/{id}/supplier', response_model=SupplierResponse)
+@router.get('/{id}/supplier', dependencies=[admins_only], response_model=SupplierResponse)
 async def get_product_supplier_by_id(
     id: int = Path(..., description='ID of the supplier'),
     service: SupplierService = Depends(get_supplier_service),
@@ -32,7 +34,7 @@ async def get_product_supplier_by_id(
     return await service.get_supplier(id, current_user)
 
 
-@router.post('/add-supplier', response_model=SupplierResponse, status_code=status.HTTP_201_CREATED)
+@router.post('/add-supplier', dependencies=[admins_only], response_model=SupplierResponse, status_code=status.HTTP_201_CREATED)
 async def add_product_supplier(
     supplier: CreateSupplier,
     service: SupplierService = Depends(get_supplier_service),
@@ -41,7 +43,7 @@ async def add_product_supplier(
     return await service.create_supplier(supplier,  current_user)
 
 
-@router.put('/{id}/update-supplier', response_model=SupplierResponse)
+@router.put('/{id}/update-supplier', dependencies=[admins_only], response_model=SupplierResponse)
 async def update_product_supplier(
     data: UpdateSupplier,
     id: int = Path(..., description="ID of the supplier"),
