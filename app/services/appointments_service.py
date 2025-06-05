@@ -116,7 +116,7 @@ class AppointmentsService:
         return new_appointment
 
 
-    async def update_appointment(self, appointment_id: int, data: UpdateScheduledAppointment, current_user: User):
+    async def update_scheduled_appointment(self, appointment_id: int, data: UpdateScheduledAppointment, current_user: User):
         """
         Asynchronously updates an existing appointment with the provided data.
 
@@ -145,7 +145,7 @@ class AppointmentsService:
         return appointment
 
 
-    async def delete_appointment(self, appointment_id: int, current_user) -> None:
+    async def delete_scheduled_appointment(self, appointment_id: int, current_user) -> None:
         """
         Asynchronously deletes an appointment by its ID if it was scheduled by the current user.
 
