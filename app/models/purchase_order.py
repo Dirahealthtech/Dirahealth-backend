@@ -24,3 +24,7 @@ class PurchaseOrder(Base, TimeStampMixin):
     supplier = relationship("Supplier", back_populates="purchase_orders")
     items = relationship("PurchaseOrderItem", back_populates="purchase_order")
     created_by = relationship("User")
+
+
+    def __repr__(self):
+        return f'<PurchaseOrder(po_number={self.po_number}, supplier_id={self.supplier_id}, order_date={self.order_date})>'

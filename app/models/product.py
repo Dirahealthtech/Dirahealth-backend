@@ -40,3 +40,7 @@ class Product(Base, TimeStampMixin):
     supplier = relationship("Supplier", back_populates="products")
     order_items = relationship("OrderItem", back_populates="product")
     cart_items = relationship("CartItem", back_populates="product")
+
+
+    def __repr__(self):
+        return f"<Product(id={self.id}, category_id={self.category_id}, supplier_id={self.supplier_id}, product_type={self.product_type})>"

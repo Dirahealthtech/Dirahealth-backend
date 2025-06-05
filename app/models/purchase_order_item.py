@@ -19,3 +19,7 @@ class PurchaseOrderItem(Base, TimeStampMixin):
     # Relationships
     purchase_order = relationship("PurchaseOrder", back_populates="items")
     product = relationship("Product")
+
+
+    def __repr__(self):
+        return f'<PurchaseOrderItem(purchase_order_id={self.purchase_order_id}, product_id={self.product_id}, quantity={self.quantity})>'

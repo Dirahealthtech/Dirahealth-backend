@@ -27,3 +27,7 @@ class InventoryTransaction(Base, TimeStampMixin):
     # Relationships
     product = relationship("Product", back_populates="inventory_transactions")
     performed_by = relationship("User")
+
+
+    def __repr__(self):
+        return f'<Inventory(id={self.id}, product_id={self.product_id}, type={self.type})>'

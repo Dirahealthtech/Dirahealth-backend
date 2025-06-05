@@ -27,3 +27,7 @@ class User(Base, TimeStampMixin):
     appointments = relationship("Appointment", foreign_keys="Appointment.customer_id", back_populates="customer")
     technician_appointments = relationship("Appointment", foreign_keys="Appointment.technician_id", back_populates="technician")
     suppliers = relationship("Supplier", back_populates="admin", cascade="all, delete-orphan")
+
+
+    def __repr__(self):
+        return f'<User(email={self.email}, first_name={self.first_name}, last_name={self.last_name}, role={self.role})>'

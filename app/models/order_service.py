@@ -18,3 +18,7 @@ class OrderService(Base, TimeStampMixin):
     order = relationship("Order", back_populates="services")
     service = relationship("Service")
     appointment = relationship("Appointment", back_populates="order_services")
+
+
+    def __repr__(self):
+        return f'<OrderService(id={self.id}, order_id={self.order_id}, service_id={self.service_id}, price={self.price})>'

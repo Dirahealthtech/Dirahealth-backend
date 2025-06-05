@@ -18,3 +18,7 @@ class Prescription(Base, TimeStampMixin):
 
     # Relationships
     customer = relationship("CustomerProfile", back_populates="prescriptions")
+
+
+    def __repr__(self):
+        return f'<Prescription(id={self.id}, customer_id={self.customer_id})>'
