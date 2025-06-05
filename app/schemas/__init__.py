@@ -1,7 +1,7 @@
 from .appointments import (
     AppointmentResponse,
-    AppointmentUpdate,
     ScheduleAppointment,
+    UpdateScheduledAppointment,
 )
 from .auth_schema import (
     ConfirmResetPasswordSchema,
@@ -21,8 +21,8 @@ from .user_schema import (
 __all__ = [
     # appointment schemas
     "AppointmentResponse",
-    "AppointmentUpdate",
     "ScheduleAppointment",
+    "UpdateScheduledAppointment",
 
     # auth schemas
     "ConfirmResetPasswordSchema",
