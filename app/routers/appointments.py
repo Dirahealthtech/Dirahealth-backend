@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, Path, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
-from ..core.dependencies import get_current_user, get_db
+from ..core.dependencies import get_current_user, get_db, RoleChecker
+from ..enums import UserRole
 from ..models import Appointment, User
 from ..schemas.appointments import (
     AppointmentResponse,
@@ -13,6 +14,7 @@ from ..services.appointments_service import AppointmentsService
 
 
 router = APIRouter()
+customers_only = Depends(RoleChecker[UserRole.CUSTOMER])
 
 
 async def get_appointment_service(db: AsyncSession = Depends(get_db)) -> AppointmentsService:
@@ -31,7 +33,7 @@ async def get_appointment_service(db: AsyncSession = Depends(get_db)) -> Appoint
     return AppointmentsService(db)
 
 
-@router.post("/schedule-appointment", response_model=List[AppointmentResponse], status_code=status.HTTP_201_CREATED)
+@router.post("/schedule-appointment", dependencies=[customers_only], response_model=List[AppointmentResponse], status_code=status.HTTP_201_CREATED)
 async def book_appointment(
     appointment_data: ScheduleAppointment,
     current_user: User = Depends(get_current_user),
@@ -47,7 +49,7 @@ async def book_appointment(
     return await service.create_appointment(appointment_data, current_user)
 
 
-@router.get("/", response_model=List[AppointmentResponse])
+@router.get("/", dependencies=[customers_only], response_model=List[AppointmentResponse])
 async def get_my_appointments(
     current_user: User = Depends(get_current_user),
     service: AppointmentsService = Depends(get_appointment_service),
@@ -58,7 +60,7 @@ async def get_my_appointments(
     return await service.get_all_appointments(current_user)
 
 
-@router.get("/{appointment_id}", response_model=AppointmentResponse)
+@router.get("/{appointment_id}", dependencies=[customers_only], response_model=AppointmentResponse)
 async def get_appointment(
     appointment_id: int = Path(..., description="ID of the appointment"),
     db: AsyncSession = Depends(get_db),
@@ -73,7 +75,7 @@ async def get_appointment(
     return appointment
 
 
-@router.put("/{appointment_id}", response_model=AppointmentResponse)
+@router.put("/{appointment_id}", dependencies=[customers_only], response_model=AppointmentResponse)
 async def update_appointment(
     data: UpdateScheduledAppointment,
     appointment_id: int = Path(..., description="ID of the appointment"),
@@ -88,7 +90,7 @@ async def update_appointment(
     return await service.update_scheduled_appointment(appointment_id, data, current_user)
 
 
-@router.delete("/{appointment_id}", status=status.HTTP_204_NO_CONTENT)
+@router.delete("/{appointment_id}", dependencies=[customers_only], status=status.HTTP_204_NO_CONTENT)
 async def delete_appointment(
     appointment_id: int = Path(..., description="ID of the appointment"),
     current_user: User = Depends(get_current_user),
