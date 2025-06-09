@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Path, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
-from ..core.dependencies import get_current_user, get_current_technician, get_db, RoleChecker
+from ..core.dependencies import get_current_user, get_db, RoleChecker
 from ..enums import UserRole
 from ..models import Appointment, User
 from ..schemas.appointments import (
@@ -15,6 +15,7 @@ from ..services.appointments_service import AppointmentsService
 
 router = APIRouter()
 customers_only = Depends(RoleChecker[UserRole.CUSTOMER])
+techinicians_only = Depends(RoleChecker([UserRole.SERVICE_TECH]))
 
 
 async def get_appointment_service(db: AsyncSession = Depends(get_db)) -> AppointmentsService:
