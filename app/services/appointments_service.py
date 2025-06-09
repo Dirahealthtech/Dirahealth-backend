@@ -161,6 +161,39 @@ class AppointmentsService:
         return appointment
 
 
+    async def update_notes_or_status(self, appointment_id: int, data: UpdateScheduledAppointment, current_user: User):
+        """
+        Updates the status or technician notes of a scheduled appointment.
+
+        Args:
+            appointment_id (int): The ID of the appointment to update.
+            data (UpdateScheduledAppointment): An object containing the new status and/or notes.
+            current_user (User): The user performing the update operation.
+
+        Returns:
+            Appointment: The updated appointment object.
+
+        Raises:
+            HTTPException: If the appointment does not exist or the user is not authorized to update it.
+        """
+
+        appointment = await self.get_appointment(appointment_id, current_user)
+
+        # Update allowed fields only (status and technician notes)
+        if not (data.status or data.notes):
+            raise HTTPException(status_code=400, detail="You're only allowed to update notes or status!")
+
+        if data.status:
+            appointment.status = data.status
+
+        if data.notes:
+            appointment.notes = data.notes
+
+        await self.db.commit()
+        await self.db.refresh(appointment)
+        return appointment
+
+
     async def delete_scheduled_appointment(self, appointment_id: int, current_user) -> None:
         """
         Asynchronously deletes an appointment by its ID if it was scheduled by the current user.
