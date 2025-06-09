@@ -70,10 +70,7 @@ async def get_appointment(
     """
     Get a single appointment by ID if owned by current user.
     """
-    appointment = await db.get(Appointment, appointment_id)
-    if not appointment or appointment.customer_id != current_user.id:
-        return []
-    return appointment
+    return await service.get_appointment(appointment_id, current_user)
 
 
 @router.put("/{appointment_id}", dependencies=[customers_only], response_model=AppointmentResponse)
