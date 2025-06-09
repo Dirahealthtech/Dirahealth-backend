@@ -98,3 +98,41 @@ async def delete_appointment(
     Delete an appointment if it exists and if the current user scheduled the appointment.
     """
     return await service.delete_scheduled_appointment(appointment_id, current_user)
+
+
+# Technicians endpoints
+
+@router.get("/technician", dependencies=[techinicians_only], response_model=List[AppointmentResponse])
+async def get_technicians_appointments(
+    service: AppointmentsService = Depends(get_appointment_service),
+    current_user: User = Depends(get_current_technician)
+):
+    """
+    List all appointments assigned to the current technician.
+    """
+    return await service.get_technician_appointment(current_user)
+
+
+@router.get("/technician/{appointment_id}", dependencies=[techinicians_only], response_model=AppointmentResponse)
+async def get_appointment_detail(
+    appointment_id: int = Path(..., description="ID of the appointment"),
+    service: AppointmentsService = Depends(get_appointment_service),
+    current_user: User = Depends(get_current_technician)
+):
+    """
+    Get details of an assigned appointment.
+    """
+    return await service.get_technician_appointment(appointment_id, current_user)
+
+
+@router.patch("/technician/{appointment_id}", dependencies=[techinicians_only], response_model=AppointmentResponse)
+async def update_appointment_status_or_notes(
+    appointment_id: int,
+    updates: UpdateScheduledAppointment,
+    service: AppointmentsService = Depends(get_appointment_service),
+    current_user: User = Depends(get_current_technician)
+):
+    """
+    Update status or notes of your assigned appointment.
+    """
+    return await service.update_notes_or_status(appointment_id, updates, current_user)
