@@ -81,7 +81,7 @@ class AppointmentsService:
         appointment = result.scalar_one_or_none()
 
         if not appointment:
-            return []  # appointment not found
+            return []   # appointment not found
 
         return appointment
 
