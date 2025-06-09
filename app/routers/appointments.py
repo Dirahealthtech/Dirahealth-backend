@@ -64,7 +64,7 @@ async def get_my_appointments(
 @router.get("/{appointment_id}", dependencies=[customers_only], response_model=AppointmentResponse)
 async def get_appointment(
     appointment_id: int = Path(..., description="ID of the appointment"),
-    db: AsyncSession = Depends(get_db),
+    service: AppointmentsService = Depends(get_appointment_service),
     current_user: User = Depends(get_current_user),
 ):
     """
