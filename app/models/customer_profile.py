@@ -20,3 +20,7 @@ class CustomerProfile(Base):
     user = relationship("User", back_populates="customer_profile")
     addresses = relationship("Address", back_populates="customer")
     prescriptions = relationship("Prescription", back_populates="customer")
+
+
+    def __repr__(self):
+        return f'<CustomerProfile(id={self.id}, user_id={self.user_id}, customer_type={self.customer_type})>'

@@ -36,7 +36,7 @@ class SupplierService:
             select(Supplier).filter_by(id=supplier_id, admin_id=current_user.id)
         )
         supplier = result.scalars().first()
-        print(f'Current user: {current_user} | Current user ID: {current_user.id}')
+        
         if not supplier:
             raise exceptions.SupplierNotFoundException()
 

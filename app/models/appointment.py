@@ -34,3 +34,7 @@ class Appointment(Base, TimeStampMixin):
     service = relationship("Service", back_populates="appointments")
     product = relationship("Product", backref="appointments")
     order_services = relationship("OrderService", back_populates="appointment")
+
+
+    def __repr__(self):
+        return f'<Appointment(customer_id={self.customer_id}, service_id={self.service_id}, product={self.product_id}>'

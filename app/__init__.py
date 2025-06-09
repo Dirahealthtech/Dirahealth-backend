@@ -21,6 +21,7 @@ from app.exceptions import (
     UserNotFoundException,
 )
 from app.middleware.auth_middleware import CustomAuthMiddleWare
+from app.routers.appointments import router as appointments_router
 from app.routers.auth import router as auth_router
 from app.routers.admin import router as admin_router
 from app.routers.suppliers import router as suppliers_router
@@ -54,6 +55,7 @@ app.add_middleware(
 app.include_router(auth_router, prefix=f'/api/{api_version}/auth', tags=["Authentication"])
 app.include_router(admin_router, prefix=f'/api/{api_version}/admin', tags=["Admin"])
 app.include_router(suppliers_router, prefix=f'/api/{api_version}/suppliers', tags=["Suppliers"])
+app.include_router(appointments_router, prefix=f'/api/{api_version}/appointments', tags=["Appointments"])
 
 
 # register custom exceptions

@@ -19,3 +19,7 @@ class Cart(Base, TimeStampMixin):
     customer = relationship("User", back_populates="cart")
     cart_items = relationship("CartItem", back_populates="cart", cascade="all, delete-orphan")
     cart_service_items = relationship("CartServiceItem", back_populates="cart", cascade="all, delete-orphan")
+
+
+    def __repr__(self):
+        return f'<Cart(id={self.id}, customer_id={self.customer_id}, discount_amount={self.discount_amount})>'

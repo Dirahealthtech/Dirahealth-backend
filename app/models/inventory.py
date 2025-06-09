@@ -23,8 +23,11 @@ class InventoryTransaction(Base, TimeStampMixin):
     total_cost = Column(Float, nullable=True)
     notes = Column(Text, nullable=True)
     performed_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
     product = relationship("Product", back_populates="inventory_transactions")
     performed_by = relationship("User")
+
+
+    def __repr__(self):
+        return f'<Inventory(id={self.id}, product_id={self.product_id}, type={self.type})>'

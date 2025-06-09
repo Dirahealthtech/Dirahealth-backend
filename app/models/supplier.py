@@ -29,3 +29,7 @@ class Supplier(Base, TimeStampMixin):
     products = relationship("Product", back_populates="supplier")
     purchase_orders = relationship("PurchaseOrder", back_populates="supplier")
     admin = relationship("User", back_populates="suppliers")
+
+
+    def __repr__(self):
+        return f'<Supplier(name={self.name}, admin_id={self.admin_id}, email={self.email})>'

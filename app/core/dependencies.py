@@ -94,3 +94,10 @@ def get_current_admin(user: User = Depends(get_current_user)) -> User:
         raise ForbiddenException(detail="Only admins can access this resource!")
 
     return user
+
+
+def get_current_technician(user: User = Depends(get_current_user)) -> User:
+    if not user.role == UserRole.SERVICE_TECH:
+        raise ForbiddenException(detail="Only technicians can access this resource!")
+
+    return user

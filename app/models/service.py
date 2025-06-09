@@ -32,3 +32,7 @@ class Service(Base, TimeStampMixin):
     # Relationships
     technicians = relationship("User", secondary=service_technician)
     appointments = relationship("Appointment", back_populates="service")
+
+
+    def __repr__(self):
+        return f'<Service(name={self.name}, service_type={self.service_type}, device_type={self.device_type})>'
