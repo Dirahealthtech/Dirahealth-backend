@@ -86,6 +86,21 @@ class AppointmentsService:
         return appointment
 
 
+    async def get_technician_appointment(self, current_user: User) -> Appointment:
+        """
+        Retrieve all appointments assigned to the currently authenticated technician.
+
+        Args:
+            current_user (User): The currently authenticated user, expected to be a technician.
+        Returns:
+            List[Appointment]: A list of Appointment objects assigned to the technician.
+        """
+
+        stmt = select(Appointment).where(Appointment.technician_id == current_user.id)
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
+
+
     async def create_appointment(self, data: ScheduleAppointment, current_user: User) -> Appointment:
         """
         Asynchronously creates a new appointment for the current user.
