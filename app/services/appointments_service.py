@@ -3,6 +3,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..enums import UserRole
 from ..models import Appointment, Service, User
 from ..schemas import ScheduleAppointment, UpdateScheduledAppointment
 
