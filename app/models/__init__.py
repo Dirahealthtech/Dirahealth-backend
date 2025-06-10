@@ -27,6 +27,7 @@ from .supplier import Supplier
 from .cart_item import CartItem
 from .cart import Cart
 from .cart_service_item import CartServiceItem
+from .coupon import Coupon
 
 
 __all__ = [
@@ -59,5 +60,6 @@ __all__ = [
     "InventoryTransaction",
     "CartItem",
     "Cart",
-    "CartServiceItem"
+    "CartServiceItem",
+    "Coupon"
 ]
