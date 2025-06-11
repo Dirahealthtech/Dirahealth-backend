@@ -88,7 +88,7 @@ async def update_appointment(
     return await service.update_scheduled_appointment(appointment_id, data, current_user)
 
 
-@router.delete("/{appointment_id}", dependencies=[customers_only], status=status.HTTP_204_NO_CONTENT)
+@router.delete("/{appointment_id}", dependencies=[customers_only], status_code=status.HTTP_204_NO_CONTENT)
 async def delete_appointment(
     appointment_id: int = Path(..., description="ID of the appointment"),
     current_user: User = Depends(get_current_user),
