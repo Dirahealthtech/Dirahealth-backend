@@ -3,7 +3,6 @@ from fastapi.security import HTTPBearer
 from fastapi.security.http import HTTPAuthorizationCredentials
 
 from .. import exceptions
-from ..db.redis import token_in_blacklist
 from ..utils.auth import decode_access_token
 
 
@@ -54,9 +53,6 @@ class TokenBearer(HTTPBearer):
 
         if not self.token_valid(token):
             raise exceptions.InvalidTokenException()
-
-        if await token_in_blacklist(token_data["jti"]):
-            raise exceptions.RevokedTokenException()
 
         self.verify_token(token_data)
         return token_data
