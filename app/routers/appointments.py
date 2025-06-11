@@ -14,7 +14,7 @@ from ..services.appointments_service import AppointmentsService
 
 
 router = APIRouter()
-customers_only = Depends(RoleChecker[UserRole.CUSTOMER])
+customers_only = Depends(RoleChecker([UserRole.CUSTOMER]))
 techinicians_only = Depends(RoleChecker([UserRole.SERVICE_TECH]))
 
 
