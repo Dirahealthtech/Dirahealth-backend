@@ -3,11 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any, AsyncGenerator, List
 
 from ..enums import UserRole
-from ..exceptions import ForbiddenException
+from ..exceptions import ForbiddenException, RevokedTokenException
 from ..core.token_bearer import AccessTokenBearer
 from ..db.database import AsyncSessionLocal
 from ..models.user import User
 from ..services import AuthService
+from ..utils.auth import token_in_blacklist
 
 
 auth_service = AuthService()
@@ -47,6 +48,12 @@ async def get_current_user(
     Raises:
         HTTPException: If the user cannot be found or the token is invalid.
     """
+    jti = token.get("jti")
+
+    # check if the access token is blacklisted
+    if jti and await token_in_blacklist(jti, session):
+        raise RevokedTokenException()
+
 
     user_email = token["user"]["email"]
     user = await auth_service.get_user(user_email, session)
