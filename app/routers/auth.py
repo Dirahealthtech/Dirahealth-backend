@@ -426,7 +426,7 @@ async def logout(token_details: dict = Depends(AccessTokenBearer()), session: As
     """
 
     jti = token_details["jti"]
-    await add_token_to_blacklist(jti)
+    await add_token_to_blacklist(jti, session)
     return JSONResponse(
         content={
             "message": "User logged out successfully!",
