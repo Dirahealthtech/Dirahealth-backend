@@ -408,7 +408,7 @@ async def confirm_reset_password(
 
 
 @router.post('/logout', status_code=status.HTTP_200_OK)
-async def logout(token_details: dict = Depends(AccessTokenBearer())):
+async def logout(token_details: dict = Depends(AccessTokenBearer()), session: AsyncSession = Depends(get_db)):
     """
     Logs out the current user by blacklisting their access token.
     This endpoint extracts the JWT ID (jti) from the provided access token,
