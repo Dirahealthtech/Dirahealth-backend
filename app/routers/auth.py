@@ -12,7 +12,6 @@ from ..core.dependencies import (
     get_db,
 )
 from ..core.token_bearer import AccessTokenBearer, RefreshTokenBearer
-from ..db.redis import add_token_to_blacklist
 from ..mails.send_mail import mail
 from ..models import User
 from ..schemas import (
@@ -30,6 +29,7 @@ from ..utils.auth import (
     create_url_safe_token,
     decode_url_safe_token,
     hash_password,
+    add_token_to_blacklist,
     verify_password,
 )
 
