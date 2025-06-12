@@ -61,5 +61,7 @@ __all__ = [
     "CartItem",
     "Cart",
     "CartServiceItem",
-    "Coupon"
+    "Coupon",
+    "ShipmentTracking",
+    "ShipmentCheckpoint"
 ]
