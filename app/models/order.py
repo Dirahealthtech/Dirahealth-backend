@@ -41,3 +41,4 @@ class Order(Base, TimeStampMixin):
     items = relationship("OrderItem", back_populates="order")
     services = relationship("OrderService", back_populates="order")
     prescription = relationship("Prescription")
+    shipment_tracking = relationship("ShipmentTracking", back_populates="order", uselist=False)
