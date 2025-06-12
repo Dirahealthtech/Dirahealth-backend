@@ -19,12 +19,18 @@ from ..schemas.order import OrderCreate, OrderResponse
 from ..enums import OrderStatus, PaymentMethod, PaymentStatus
 from ..exceptions import NotFoundException, BadRequestException
 from ..services.email_service import EmailService
-from ..services.user_service import UserService
 from ..core.config import Config
-from ..db.session import get_db_session
+from ..core.dependencies import get_db
 
 
 class OrderService:
+    # Helper function
+    async def _get_user_by_id(self, user_id: int, db: AsyncSession) -> User:
+        """Get user by ID"""
+        user = await db.get(User, user_id)
+        if not user:
+            raise NotFoundException(f"User with ID {user_id} not found")
+        return user
     async def create_order_from_cart(
         self,
         user_id: int,
@@ -185,7 +191,7 @@ class OrderService:
             if isinstance(e, (NotFoundException, BadRequestException)):
                 raise
                 
-            # Log the error
+            # TODO Remove debugging step
             print(f"Error creating order: {str(e)}")
             
             # Raise a generic exception with a user-friendly message
@@ -1023,8 +1029,7 @@ class OrderService:
         """Send order confirmation email"""
         try:            
             # Get user details
-            user_service = UserService()
-            customer = await user_service.get_user_by_id(order.customer_id, db)
+            customer = await self._get_user_by_id(order.customer_id, db)
             
             # Get order details including items and services
             order_details = await self.get_order_detail(order.id, order.customer_id, db)
@@ -1054,18 +1059,15 @@ class OrderService:
             await email_service.send_order_confirmation(customer.email, order_data)
             
         except Exception as e:
-            # For notification methods, we don't want to break the main flow if they fail
-            # Just log the error
             print(f"Error sending order confirmation email: {str(e)}")
 
     async def send_order_status_notification(self, order: Order) -> None:
         """Send notification when order status changes"""
         try:
             # Get user details
-            user_service = UserService()
-            db_session = get_db_session()
+            db_session = get_db()
             async with db_session() as db:
-                customer = await user_service.get_user_by_id(order.customer_id, db)
+                customer = await self.get_user_by_id(order.customer_id, db)
                 
                 # Get tracking info if available
                 tracking_info = await self.get_tracking_info(order.id, order.customer_id, db)
@@ -1097,10 +1099,9 @@ class OrderService:
         """Send notification when payment status changes"""
         try:
             # Get user details
-            user_service = UserService()
-            db_session = get_db_session()
+            db_session = get_db()
             async with db_session() as db:
-                customer = await user_service.get_user_by_id(order.customer_id, db)
+                customer = await self._get_user_by_id(order.customer_id, db)
                 
                 # Get order details
                 order_details = await self.get_order_detail(order.id, order.customer_id, db)
@@ -1159,10 +1160,9 @@ class OrderService:
         """Send notification when an order is cancelled"""
         try:
             # Get user details
-            user_service = UserService()
-            db_session = get_db_session()
+            db_session = get_db()
             async with db_session() as db:
-                customer = await user_service.get_user_by_id(order.customer_id, db)
+                customer = await self._get_user_by_id(order.customer_id, db)
                 
                 # Get order details
                 order_details = await self.get_order_detail(order.id, order.customer_id, db)
@@ -1210,10 +1210,9 @@ class OrderService:
         """Send notification when a refund is processed"""
         try:
             # Get user details
-            user_service = UserService()
-            db_session = get_db_session()
+            db_session = get_db()
             async with db_session() as db:
-                customer = await user_service.get_user_by_id(order.customer_id, db)
+                customer = await self._get_user_by_id(order.customer_id, db)
                 
                 # Get order details
                 order_details = await self.get_order_detail(order.id, order.customer_id, db)
@@ -1235,8 +1234,8 @@ class OrderService:
                     "order_total": order.total,
                     "currency": order.payment_currency or "KES",
                     "payment_method": order.payment_method.value,
-                    "payment_account": "Original payment method", # This should be customized based on actual refund destination
-                    "estimated_arrival": (datetime.datetime.now() + datetime.timedelta(days=5)).date(), # Typical estimate
+                    "payment_account": "Original payment method",
+                    "estimated_arrival": (datetime.datetime.now() + datetime.timedelta(days=5)).date(),
                     "support_email": Config.SUPPORT_EMAIL or "support@dira.health",
                     "order_url": f"{Config.FRONTEND_URL}/orders/{order.id}",
                     "current_year": datetime.datetime.now().year,
