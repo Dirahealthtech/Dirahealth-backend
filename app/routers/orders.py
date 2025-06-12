@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
-from ..core.dependencies import get_db, get_current_user, get_admin_user
+from ..core.dependencies import get_db, get_current_user, get_current_admin
 from ..models import User
 from ..schemas.order import OrderCreate, OrderResponse, OrderDetail, OrderStatusUpdate
 from ..services.order_service import OrderService
@@ -44,7 +44,7 @@ async def get_order_detail(
 @router.post("/{order_id}/delivery-confirmation")
 async def confirm_delivery(
     order_id: int,
-    admin_user: User = Depends(get_admin_user),  # Ensure only authorized users can confirm delivery
+    admin_user: User = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """Mark an order as delivered and complete the cash on delivery payment"""
@@ -69,7 +69,7 @@ async def get_order_tracking(
 async def update_order_tracking(
     order_id: int,
     tracking_data: TrackingUpdate,
-    admin_user: User = Depends(get_admin_user),
+    admin_user: User = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """Update tracking information for an order (admin only)"""
@@ -85,7 +85,7 @@ async def update_order_status(
     order_id: int,
     status_update: OrderStatusUpdate,
     background_tasks: BackgroundTasks,
-    admin_user: User = Depends(get_admin_user),
+    admin_user: User = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """Update an order's status (admin only)"""
