@@ -28,6 +28,10 @@ from .cart_item import CartItem
 from .cart import Cart
 from .cart_service_item import CartServiceItem
 from .coupon import Coupon
+from .order_status_history import OrderStatusHistory
+from .order_cancellation import OrderCancellation
+from .payment_transaction import PaymentTransaction
+from .refund import Refund
 
 
 __all__ = [
@@ -63,5 +67,9 @@ __all__ = [
     "CartServiceItem",
     "Coupon",
     "ShipmentTracking",
-    "ShipmentCheckpoint"
+    "ShipmentCheckpoint",
+    "OrderStatusHistory",
+    "PaymentTransaction",
+    "OrderCancellation",
+    "Refund"
 ]
