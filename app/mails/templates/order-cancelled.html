@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Order Cancelled</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif; 
+            line-height: 1.6;
+            color: #333333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #e74c3c;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 4px 4px 0 0;
+        }
+        .content {
+            padding: 20px;
+            background-color: #f9f9f9;
+            border: 1px solid #dddddd;
+        }
+        .order-box {
+            background-color: white;
+            padding: 15px;
+            border: 1px solid #eeeeee;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #2c3e50;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #777777;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Order Cancelled</h2>
+        <div>Order #{{ order_number }}</div>
+    </div>
+    
+    <div class="content">
+        <p>Dear {{ customer_name }},</p>
+        
+        <p>Your order #{{ order_number }} has been cancelled as requested.</p>
+        
+        <div class="order-box">
+            <p><strong>Cancellation Details:</strong></p>
+            <p><strong>Order Number:</strong> {{ order_number }}</p>
+            <p><strong>Order Date:</strong> {{ order_date|date:"F j, Y" }}</p>
+            <p><strong>Cancellation Date:</strong> {{ cancelled_date|date:"F j, Y" }}</p>
+            <p><strong>Reason:</strong> {{ cancel_reason }}</p>
+            
+            {% if refund_eligible %}
+            <p><strong>Refund Status:</strong> A refund of {{ currency }} {{ order_total }} will be processed to your original payment method. Please allow 5-7 business days for the refund to appear in your account.</p>
+            {% endif %}
+        </div>
+        
+        <p>If you have any questions about this cancellation, please contact our customer service team at {{ support_email }} or {{ support_phone }}.</p>
+        
+        <p>
+            <a href="{{ shop_url }}" class="button">Continue Shopping</a>
+        </p>
+        
+        <p>We hope to serve you again soon!</p>
+        
+        <p>Best regards,<br>The Dira Healthcare Team</p>
+    </div>
+    
+    <div class="footer">
+        <p>This email was sent to {{ customer_email }} regarding your order with Dira Healthcare.</p>
+        <p>&copy; {{ current_year }} Dira Healthcare. All rights reserved.</p>
+    </div>
+</body>
+</html>

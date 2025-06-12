@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Payment Failed</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif; 
+            line-height: 1.6;
+            color: #333333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #e74c3c;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 4px 4px 0 0;
+        }
+        .content {
+            padding: 20px;
+            background-color: #f9f9f9;
+            border: 1px solid #dddddd;
+        }
+        .warning-icon {
+            color: #e74c3c;
+            font-size: 48px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #2c3e50;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #777777;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Payment Failed</h2>
+        <div>Order #{{ order_number }}</div>
+    </div>
+    
+    <div class="content">
+        <p>Dear {{ customer_name }},</p>
+        
+        <p>We were unable to process your payment for order #{{ order_number }}.</p>
+        
+        <div class="warning-icon">❗</div>
+        
+        <p><strong>Payment Details:</strong></p>
+        <ul>
+            <li>Amount: {{ currency }} {{ order_total }}</li>
+            <li>Payment Method: {{ payment_method|title }}</li>
+            <li>Date: {{ order.updated_at|date:"F j, Y" }}</li>
+        </ul>
+        
+        <p>This could be due to one of the following reasons:</p>
+        <ul>
+            <li>Insufficient funds in your account</li>
+            <li>Card expired or invalid</li>
+            <li>Payment declined by your bank</li>
+            <li>Incorrect payment details</li>
+        </ul>
+        
+        <p>Please update your payment information to complete your order. Your order will be held for 24 hours before it's cancelled.</p>
+        
+        <p>
+            <a href="{{ payment_url }}" class="button">Update Payment</a>
+        </p>
+        
+        <p>If you need any assistance, please contact our customer service team.</p>
+        
+        <p>Best regards,<br>The Dira Healthcare Team</p>
+    </div>
+    
+    <div class="footer">
+        <p>This email was sent to {{ customer_email }} regarding your order with Dira Healthcare.</p>
+        <p>&copy; {{ current_year }} Dira Healthcare. All rights reserved.</p>
+    </div>
+</body>
+</html>
