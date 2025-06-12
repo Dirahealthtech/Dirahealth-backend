@@ -41,11 +41,12 @@ class Order(Base, TimeStampMixin):
     items = relationship("OrderItem", back_populates="order")
     services = relationship("OrderService", back_populates="order")
     prescription = relationship("Prescription")
-<<<<<<< HEAD
     shipment_tracking = relationship("ShipmentTracking", back_populates="order", uselist=False)
-=======
+    status_history = relationship("OrderStatusHistory", back_populates="order", cascade="all, delete-orphan")
+    transactions = relationship("PaymentTransaction", back_populates="order", cascade="all, delete-orphan")
+    cancellation = relationship("OrderCancellation", back_populates="order", uselist=False, cascade="all, delete-orphan")
+    refunds = relationship("Refund", back_populates="order", cascade="all, delete-orphan")
 
 
     def __repr__(self):
         return f'<Order(id={self.id}, order_number={self.order_number}, customer_id={self.customer_id}, status={self.status})>'
->>>>>>> 3baae4d42a44f67e43a2bba8f760a6ecc5c303c9
