@@ -10,7 +10,7 @@ class PurchaseOrder(Base, TimeStampMixin):
     __tablename__ = "purchase_orders"
 
     id = Column(Integer, primary_key=True, index=True)
-    po_number = Column(String, nullable=False, unique=True)
+    po_number = Column(String, nullable=False, unique=True)     # purchase order number
     supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=False)
     order_date = Column(DateTime, default=datetime.now(timezone.utc))
     expected_delivery_date = Column(DateTime, nullable=True)
@@ -24,3 +24,7 @@ class PurchaseOrder(Base, TimeStampMixin):
     supplier = relationship("Supplier", back_populates="purchase_orders")
     items = relationship("PurchaseOrderItem", back_populates="purchase_order")
     created_by = relationship("User")
+
+
+    def __repr__(self):
+        return f'<PurchaseOrder(po_number={self.po_number}, supplier_id={self.supplier_id}, order_date={self.order_date})>'

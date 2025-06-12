@@ -15,3 +15,7 @@ class CartServiceItem(Base, TimeStampMixin):
     # Relationships
     cart = relationship("Cart", back_populates="cart_service_items")
     service = relationship("Service")
+
+
+    def __repr__(self):
+        return f'<CartServiceItem(cart_id={self.cart_id}, service_id={self.service_id})>'

@@ -5,6 +5,8 @@ from app.exceptions import (
     create_exception_handler,
     AccessTokenRequiredException,
     AccountNotVerifiedException,
+    CannotDeleteSupplier,
+    CannotUpdateSupplierProfile,
     InvalidTokenException,
     InvalidUserCredentialsException,
     PasswordsDontMatchException,
@@ -12,14 +14,17 @@ from app.exceptions import (
     PermissionRequiredException,
     RefreshTokenRequiredException,
     RevokedTokenException,
+    SupplierExistsException,
+    SupplierNotFoundException,
     UserAlreadyExistsException,
     UsernameAlreadyExistsException,
     UserNotFoundException,
 )
 from app.middleware.auth_middleware import CustomAuthMiddleWare
+from app.routers.appointments import router as appointments_router
 from app.routers.auth import router as auth_router
 from app.routers.admin import router as admin_router
-from app.routers.cart import router as cart_router
+from app.routers.suppliers import router as suppliers_router
 
 
 api_version = "v1"
@@ -49,8 +54,8 @@ app.add_middleware(
 # register endpoints
 app.include_router(auth_router, prefix=f'/api/{api_version}/auth', tags=["Authentication"])
 app.include_router(admin_router, prefix=f'/api/{api_version}/admin', tags=["Admin"])
-app.include_router(cart_router, prefix=f'/api/{api_version}/cart', tags=["Cart"])
-
+app.include_router(suppliers_router, prefix=f'/api/{api_version}/suppliers', tags=["Suppliers"])
+app.include_router(appointments_router, prefix=f'/api/{api_version}/appointments', tags=["Appointments"])
 
 
 # register custom exceptions
@@ -71,3 +76,10 @@ app.add_exception_handler(PasswordIsShortException, create_exception_handler(400
 app.add_exception_handler(UserAlreadyExistsException, create_exception_handler(409, "User with this email exists!"))
 app.add_exception_handler(UsernameAlreadyExistsException, create_exception_handler(409, "The username is already taken!"))
 app.add_exception_handler(UserNotFoundException, create_exception_handler(404, "User not found."))
+
+
+# supplier-related exception handlers
+app.add_exception_handler(SupplierExistsException, create_exception_handler(409, "The supplier provided supplies your products!"))
+app.add_exception_handler(SupplierNotFoundException, create_exception_handler(404, "Supplier not found!"))
+app.add_exception_handler(CannotUpdateSupplierProfile, create_exception_handler(403, "You can't update a supplier who doesn't supply your products!"))
+app.add_exception_handler(CannotDeleteSupplier, create_exception_handler(403, "You can't delete a supplier who doesn't supply your products!"))
