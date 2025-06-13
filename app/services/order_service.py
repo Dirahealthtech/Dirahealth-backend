@@ -626,11 +626,10 @@ class OrderService:
             # Get tracking info if available
             tracking_info = await self.get_tracking_info(order.id, order.customer_id, db)
             
-            # Get basic order data
             order_data = {
                 "id": order.id,
                 "order_number": order.order_number,
-                "status": order.status,
+                "status": order.status.value if hasattr(order.status, 'value') else str(order.status),
                 "customer_name": getattr(customer, 'full_name', customer.email),
                 "frontend_url": Config.DOMAIN,
                 "current_year": datetime.now().year
