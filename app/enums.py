@@ -71,6 +71,7 @@ class PaymentMethod(str, enum.Enum):
     CARD = "card"
     BANK_TRANSFER = "bank_transfer"
     CASH = "cash"
+    CASH_ON_DELIVERY = "cash_on_delivery"
 
 
 class PaymentStatus(str, enum.Enum):

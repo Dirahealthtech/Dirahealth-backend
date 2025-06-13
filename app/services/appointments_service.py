@@ -3,6 +3,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..enums import UserRole
 from ..models import Appointment, Service, User
 from ..schemas import ScheduleAppointment, UpdateScheduledAppointment
 
@@ -80,9 +81,24 @@ class AppointmentsService:
         appointment = result.scalar_one_or_none()
 
         if not appointment:
-            return []  # appointment not found
+            return []   # appointment not found
 
         return appointment
+
+
+    async def get_technician_appointment(self, current_user: User) -> Appointment:
+        """
+        Retrieve all appointments assigned to the currently authenticated technician.
+
+        Args:
+            current_user (User): The currently authenticated user, expected to be a technician.
+        Returns:
+            List[Appointment]: A list of Appointment objects assigned to the technician.
+        """
+
+        stmt = select(Appointment).where(Appointment.technician_id == current_user.id)
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
 
 
     async def create_appointment(self, data: ScheduleAppointment, current_user: User) -> Appointment:
@@ -139,6 +155,39 @@ class AppointmentsService:
 
         for field, value in data.model_dump(exclude_unset=True).items():
             setattr(appointment, field, value)
+
+        await self.db.commit()
+        await self.db.refresh(appointment)
+        return appointment
+
+
+    async def update_notes_or_status(self, appointment_id: int, data: UpdateScheduledAppointment, current_user: User):
+        """
+        Updates the status or technician notes of a scheduled appointment.
+
+        Args:
+            appointment_id (int): The ID of the appointment to update.
+            data (UpdateScheduledAppointment): An object containing the new status and/or notes.
+            current_user (User): The user performing the update operation.
+
+        Returns:
+            Appointment: The updated appointment object.
+
+        Raises:
+            HTTPException: If the appointment does not exist or the user is not authorized to update it.
+        """
+
+        appointment = await self.get_appointment(appointment_id, current_user)
+
+        # Update allowed fields only (status and technician notes)
+        if not (data.status or data.notes):
+            raise HTTPException(status_code=400, detail="You're only allowed to update notes or status!")
+
+        if data.status:
+            appointment.status = data.status
+
+        if data.notes:
+            appointment.notes = data.notes
 
         await self.db.commit()
         await self.db.refresh(appointment)

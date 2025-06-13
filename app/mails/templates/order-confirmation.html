@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Order Confirmation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif; 
+            line-height: 1.6;
+            color: #333333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 4px 4px 0 0;
+        }
+        .content {
+            padding: 20px;
+            background-color: #f9f9f9;
+            border: 1px solid #dddddd;
+        }
+        .order-summary {
+            background-color: white;
+            padding: 15px;
+            border: 1px solid #eeeeee;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        .items-table th, .items-table td {
+            border-bottom: 1px solid #eeeeee;
+            padding: 10px 0;
+            text-align: left;
+        }
+        .items-table th {
+            font-weight: bold;
+        }
+        .price {
+            text-align: right;
+        }
+        .totals {
+            margin-top: 15px;
+            border-top: 2px solid #eeeeee;
+            padding-top: 10px;
+        }
+        .totals div {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        .grand-total {
+            font-weight: bold;
+            font-size: 1.1em;
+            border-top: 1px solid #dddddd;
+            padding-top: 5px;
+            margin-top: 5px;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #2c3e50;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        .address-box {
+            background-color: white;
+            padding: 15px;
+            border: 1px solid #eeeeee;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .address-grid {
+            display: flex;
+            justify-content: space-between;
+        }
+        .address-grid > div {
+            width: 48%;
+        }
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #777777;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Thank You for Your Order</h2>
+        <div>Order #{{ order.order_number }}</div>
+    </div>
+    
+    <div class="content">
+        <p>Dear {{ customer_name }},</p>
+        
+        <p>Thank you for your order! We're processing it now and will let you know when it ships.</p>
+        
+        <div class="order-summary">
+            <h3>Order Summary</h3>
+            <p><strong>Order Number:</strong> {{ order.order_number }}</p>
+            <p><strong>Order Date:</strong> {{ order.created_at|date:"F j, Y" }}</p>
+            <p><strong>Payment Method:</strong> {{ order.payment_method }}</p>
+            
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Qty</th>
+                        <th class="price">Price</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order.items %}
+                    <tr>
+                        <td>{{ item.product_name }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td class="price">KES {{ item.price }}</td>
+                    </tr>
+                    {% endfor %}
+                    
+                    {% for service in order.services %}
+                    <tr>
+                        <td>{{ service.service_name }} (Service)</td>
+                        <td>1</td>
+                        <td class="price">KES {{ service.price }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            <div class="totals">
+                <div>
+                    <span>Subtotal:</span>
+                    <span>KES {{ order.subtotal }}</span>
+                </div>
+                {% if order.discount > 0 %}
+                <div>
+                    <span>Discount:</span>
+                    <span>-KES {{ order.discount }}</span>
+                </div>
+                {% endif %}
+                <div>
+                    <span>Shipping:</span>
+                    <span>KES {{ order.shipping_cost }}</span>
+                </div>
+                <div>
+                    <span>Tax:</span>
+                    <span>KES {{ order.tax }}</span>
+                </div>
+                <div class="grand-total">
+                    <span>Total:</span>
+                    <span>KES {{ order.total }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="address-grid">
+            <div class="address-box">
+                <h3>Shipping Address</h3>
+                <p>
+                    {{ order.shipping_address.street }}<br>
+                    {{ order.shipping_address.city }}, {{ order.shipping_address.state }} {{ order.shipping_address.postal_code }}<br>
+                    {{ order.shipping_address.country }}<br>
+                    {% if order.shipping_address.phone %}
+                    Phone: {{ order.shipping_address.phone }}
+                    {% endif %}
+                </p>
+            </div>
+            
+            <div class="address-box">
+                <h3>Billing Address</h3>
+                <p>
+                    {{ order.billing_address.street }}<br>
+                    {{ order.billing_address.city }}, {{ order.billing_address.state }} {{ order.billing_address.postal_code }}<br>
+                    {{ order.billing_address.country }}<br>
+                    {% if order.billing_address.phone %}
+                    Phone: {{ order.billing_address.phone }}
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+        
+        <p>
+            <a href="{{ order_detail_url }}" class="button">View Order Details</a>
+        </p>
+        
+        <p>If you have any questions about your order, please feel free to contact our customer service team.</p>
+        
+        <p>Thank you for shopping with Dira Healthcare!</p>
+        
+        <p>Best regards,<br>The Dira Healthcare Team</p>
+    </div>
+    
+    <div class="footer">
+        <p>This email was sent to {{ customer_email }} regarding your order with Dira Healthcare.</p>
+        <p>&copy; {{ current_year }} Dira Healthcare. All rights reserved.</p>
+    </div>
+</body>
+</html>

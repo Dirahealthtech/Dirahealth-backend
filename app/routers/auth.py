@@ -12,7 +12,6 @@ from ..core.dependencies import (
     get_db,
 )
 from ..core.token_bearer import AccessTokenBearer, RefreshTokenBearer
-from ..db.redis import add_token_to_blacklist
 from ..mails.send_mail import mail
 from ..models import User
 from ..schemas import (
@@ -30,6 +29,7 @@ from ..utils.auth import (
     create_url_safe_token,
     decode_url_safe_token,
     hash_password,
+    add_token_to_blacklist,
     verify_password,
 )
 
@@ -408,7 +408,7 @@ async def confirm_reset_password(
 
 
 @router.post('/logout', status_code=status.HTTP_200_OK)
-async def logout(token_details: dict = Depends(AccessTokenBearer())):
+async def logout(token_details: dict = Depends(AccessTokenBearer()), session: AsyncSession = Depends(get_db)):
     """
     Logs out the current user by blacklisting their access token.
     This endpoint extracts the JWT ID (jti) from the provided access token,
@@ -426,7 +426,7 @@ async def logout(token_details: dict = Depends(AccessTokenBearer())):
     """
 
     jti = token_details["jti"]
-    await add_token_to_blacklist(jti)
+    await add_token_to_blacklist(jti, session)
     return JSONResponse(
         content={
             "message": "User logged out successfully!",

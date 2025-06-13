@@ -1,9 +1,12 @@
 from datetime import datetime, timedelta, timezone
 from itsdangerous import URLSafeTimedSerializer
-from passlib.context import CryptContext
 from jose import jwt
+from passlib.context import CryptContext
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from ..core.config import Config
+from ..models.blacklisted_tokens import BlacklistedToken
 import jwt
 import logging
 import uuid
@@ -143,3 +146,46 @@ def decode_url_safe_token(private_key: str, max_age=1800):
 
     except Exception as e:
         logging.error(str(e))
+
+
+async def add_token_to_blacklist(token_jti: str, db: AsyncSession) -> None:
+    """
+    Adds a JWT token's JTI (unique identifier) to the blacklist in the database.
+    This function creates a new BlacklistedToken entry with the provided token JTI and its expiry time,
+    adds it to the database session, and commits the transaction. This is typically used to invalidate
+    tokens (e.g., on logout) so they can no longer be used for authentication.
+
+    Args:
+        token_jti (str): The unique identifier (JTI) of the JWT token to blacklist.
+        db (AsyncSession): The asynchronous SQLAlchemy database session.
+
+    Returns:
+        None
+    """
+
+    expires_at = BlacklistedToken.expiry_time()
+    token = BlacklistedToken(jti=token_jti, expires_at=expires_at)
+    db.add(token)
+    await db.commit()
+
+
+async def token_in_blacklist(token_jti: str, db: AsyncSession) -> bool:
+    """
+    Check if a given token's JTI (JWT ID) is present in the blacklist and has not expired.
+
+    Args:
+        token_jti (str): The unique identifier (JTI) of the token to check.
+        db (AsyncSession): The asynchronous database session to use for the query.
+
+    Returns:
+        bool: True if the token is found in the blacklist and has not expired, False otherwise.
+    """
+
+    result = await db.execute(
+        select(BlacklistedToken).where(
+            BlacklistedToken.jti ==token_jti,
+            BlacklistedToken.expires_at > datetime.now(timezone.utc),
+        )
+    )
+
+    return result.scalar_one_or_none() is not None  # return False if the token is not found instead of a None, and True otherwise
