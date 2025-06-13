@@ -30,7 +30,7 @@ async def get_user_orders(
     limit: int = 10
 ):
     """Get all orders for the current user"""
-    return await order_service.get_user_orders(current_user.id, skip, limit, db)
+    return await order_service.get_user_orders(current_user.id, db, skip, limit)
 
 @router.get("/{order_id}", response_model=OrderDetail)
 async def get_order_detail(

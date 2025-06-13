@@ -24,7 +24,6 @@ from ..core.dependencies import get_db
 
 
 class OrderService:
-    # Helper function
     async def _get_user_by_id(self, user_id: int, db: AsyncSession) -> User:
         """Get user by ID"""
         user = await db.get(User, user_id)
