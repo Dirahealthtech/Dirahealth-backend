@@ -32,6 +32,8 @@ from .order_status_history import OrderStatusHistory
 from .order_cancellation import OrderCancellation
 from .payment_transaction import PaymentTransaction
 from .refund import Refund
+from .user_activity import UserActivity
+from .flash_sales import FlashSale
 
 
 __all__ = [
@@ -71,5 +73,7 @@ __all__ = [
     "OrderStatusHistory",
     "PaymentTransaction",
     "OrderCancellation",
-    "Refund"
+    "Refund",
+    "UserActivity",
+    "FlashSale",
 ]
