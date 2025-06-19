@@ -117,3 +117,9 @@ class DeviceType(str, enum.Enum):
     LOWER_LIMB = "lower_limb"
     HOSPITAL_EQUIPMENT = "hospital_equipment"
     GENERAL = "general"
+
+
+class UserActivity(str, enum.Enum):
+    VIEW = "view"
+    PURCHASE = "purchase"
+    SEARCH = "search"
