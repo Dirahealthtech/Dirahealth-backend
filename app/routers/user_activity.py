@@ -7,7 +7,8 @@ from ..models import User
 from ..schemas.product import ProductResponse
 from ..services.user_activity_service import UserActivityService
 
-router = APIRouter()
+
+router = APIRouter(prefix='/activity')
 
 
 async def get_user_activity_service(db: AsyncSession = Depends(get_db)) -> UserActivityService:
