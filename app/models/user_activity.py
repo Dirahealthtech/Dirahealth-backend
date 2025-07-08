@@ -16,7 +16,8 @@ class UserActivity(Base, TimeStampMixin):
     __tablename__ = "user_activities"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    anonymous_id = Column(String, nullable=True)  # to track anonymous users
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
     activity_type = Column(Enum(UserActivity), default=UserActivity.VIEW)
     timestamp = Column(DateTime, default=datetime.now(timezone.utc))
