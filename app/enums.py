@@ -71,6 +71,7 @@ class PaymentMethod(str, enum.Enum):
     CARD = "card"
     BANK_TRANSFER = "bank_transfer"
     CASH = "cash"
+    CASH_ON_DELIVERY = "cash_on_delivery"
 
 
 class PaymentStatus(str, enum.Enum):
@@ -116,3 +117,9 @@ class DeviceType(str, enum.Enum):
     LOWER_LIMB = "lower_limb"
     HOSPITAL_EQUIPMENT = "hospital_equipment"
     GENERAL = "general"
+
+
+class ActivityType(str, enum.Enum):
+    VIEW = "view"
+    PURCHASE = "purchase"
+    SEARCH = "search"

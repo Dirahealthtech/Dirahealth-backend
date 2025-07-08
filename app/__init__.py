@@ -25,6 +25,9 @@ from app.routers.appointments import router as appointments_router
 from app.routers.auth import router as auth_router
 from app.routers.admin import router as admin_router
 from app.routers.suppliers import router as suppliers_router
+from app.routers.cart import router as cart_router
+from app.routers.orders import router as orders_router
+from app.routers.user_activity import router as user_activity_router
 
 
 api_version = "v1"
@@ -56,6 +59,9 @@ app.include_router(auth_router, prefix=f'/api/{api_version}/auth', tags=["Authen
 app.include_router(admin_router, prefix=f'/api/{api_version}/admin', tags=["Admin"])
 app.include_router(suppliers_router, prefix=f'/api/{api_version}/suppliers', tags=["Suppliers"])
 app.include_router(appointments_router, prefix=f'/api/{api_version}/appointments', tags=["Appointments"])
+app.include_router(cart_router, prefix=f'/api/{api_version}/cart', tags=["Cart"])
+app.include_router(orders_router, prefix=f'/api/{api_version}/orders', tags=['Orders'])
+app.include_router(user_activity_router, prefix=f'/api/{api_version}/user', tags=["User Activity"])
 
 
 # register custom exceptions
