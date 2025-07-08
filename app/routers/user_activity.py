@@ -26,7 +26,8 @@ async def get_user_activity_service(db: AsyncSession = Depends(get_db)) -> UserA
 
 @router.get("/top-picks", response_model=List[ProductResponse])
 async def get_top_picks(
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_anonymous_user),
+    anonymous_user: Optional[str] = Query(None),
     service: UserActivityService = Depends(get_user_activity_service),
 ):
     """
