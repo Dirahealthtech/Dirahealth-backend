@@ -12,24 +12,28 @@ class UserActivityService:
         self.db = db
 
 
-    async def get_top_picks(self, user: User):
+    async def get_top_picks(self, user: Optional[User] = None, anonymous_id: Optional[str] = None):
         # Get categories of products the user interacted with
-        result = await self.db.execute(
-            select(Product.category_id)
-            .join(UserActivity, Product.id == UserActivity.product_id)
-            .where(UserActivity.user_id == user.id)
-            .order_by(UserActivity.timestamp.desc())
-            .limit(10)
-        )
+        stmt = select(Product.category_id).join(UserActivity, Product.id == UserActivity.product_id)
+
+        if user:
+            stmt = stmt.where(UserActivity.user_id == user.id)
+        elif anonymous_id:
+            stmt = stmt.where(UserActivity.anonymous_id == anonymous_id)
+        else:
+            return []  # no activity data
+
+        stmt = stmt.order_by(UserActivity.timestamp.desc()).limit(10)
+        result = await self.db.execute(stmt)
         category_ids = list(set([row[0] for row in result.all()]))
 
-        # Recommend popular products in those categories
-        if category_ids:
-            rec_query = await self.db.execute(
-                select(Product)
-                .where(Product.category_id.in_(category_ids))
-                .order_by(Product.views.desc())
-                .limit(10)
-            )
-            return rec_query.scalars().all()
-        return []
+        if not category_ids:
+            return []
+
+        rec_query = await self.db.execute(
+            select(Product)
+            .where(Product.category_id.in_(category_ids))
+            .order_by(Product.views.desc())
+            .limit(10)
+        )
+        return rec_query.scalars().all()
