@@ -45,4 +45,20 @@ async def get_top_picks(
     Raises:
         HTTPException: If the user is not authenticated or an error occurs during retrieval.
     """
-    return await service.get_top_picks(current_user)
+    return await service.get_top_picks(current_user, anonymous_user)
+
+
+@router.get('/homepage', response_model=List[ProductResponse])
+async def get_products(service: UserActivityService = Depends(get_user_activity_service)):
+    """
+    Retrieve available products to users. This endpoint returns a list of products sold by suppliers
+    via the website.
+    """
+    return await service.get_products()
+
+@router.get('/product/{slug}', response_model=ProductResponse)
+async def get_product_details_by_slug(
+    slug: str,
+    service: UserActivityService = Depends(get_user_activity_service),
+):
+    return await service.get_product_by_slug(slug)
