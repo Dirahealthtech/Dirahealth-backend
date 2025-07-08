@@ -1,6 +1,6 @@
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Any, AsyncGenerator, List
+from typing import Any, AsyncGenerator, List, Optional
 
 from ..enums import UserRole
 from ..exceptions import ForbiddenException, RevokedTokenException
@@ -58,6 +58,13 @@ async def get_current_user(
     user_email = token["user"]["email"]
     user = await auth_service.get_user(user_email, session)
     return user
+
+
+async def get_anonymous_user(request: Request) -> Optional[User]:
+    try:
+        return await get_current_user(request)
+    except Exception:
+        return None
 
 
 class RoleChecker:
