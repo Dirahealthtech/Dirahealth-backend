@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
+from typing import List, Optional
 
-from ..core.dependencies import get_current_user, get_db
+from ..core.dependencies import get_anonymous_user, get_db
 from ..models import User
 from ..schemas.product import ProductResponse
 from ..services.user_activity_service import UserActivityService
