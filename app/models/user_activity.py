@@ -3,7 +3,7 @@ from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String
 
 from .base import TimeStampMixin
 from ..db.base import Base
-from ..enums import UserActivity
+from ..enums import ActivityType
 
 
 class UserActivity(Base, TimeStampMixin):
@@ -19,7 +19,7 @@ class UserActivity(Base, TimeStampMixin):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     anonymous_id = Column(String, nullable=True)  # to track anonymous users
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
-    activity_type = Column(Enum(UserActivity), default=UserActivity.VIEW)
+    activity_type = Column(String(20), default=ActivityType.VIEW)
     timestamp = Column(DateTime, default=datetime.now(timezone.utc))
 
 
