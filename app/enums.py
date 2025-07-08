@@ -119,7 +119,7 @@ class DeviceType(str, enum.Enum):
     GENERAL = "general"
 
 
-class UserActivity(str, enum.Enum):
+class ActivityType(str, enum.Enum):
     VIEW = "view"
     PURCHASE = "purchase"
     SEARCH = "search"
