@@ -1,7 +1,10 @@
-from sqlalchemy import select
+from sqlalchemy import cast, desc, func, select, or_
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.types import String
+from typing import List, Optional
 
-from ..models import Product, User, UserActivity
+from ..models import OrderItem, Product, User, UserActivity
 
 
 class UserActivityService:
