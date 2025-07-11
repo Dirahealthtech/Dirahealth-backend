@@ -1,13 +1,12 @@
 from datetime import datetime, timedelta, timezone
 from itsdangerous import URLSafeTimedSerializer
-from jose import jwt
+import jwt
 from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from ..core.config import Config
 from ..models.blacklisted_tokens import BlacklistedToken
-import jwt
 import logging
 import uuid
 
@@ -78,8 +77,8 @@ def create_access_token(data: dict, expiry: timedelta = None, refresh: bool = Fa
 
     # Encode the payload into a JWT using the configured secret and algorithm
     token = jwt.encode(
-        payload=payload,
-        key=Config.JWT_SECRET,
+        payload,
+        Config.JWT_SECRET,
         algorithm=Config.JWT_ALGORITHM
     )
 
@@ -102,7 +101,7 @@ def decode_access_token(token: str) -> dict:
     """
 
     try:
-        token_data = jwt.decode(jwt=token, key=Config.JWT_SECRET, algorithms=[Config.JWT_ALGORITHM])
+        token_data = jwt.decode(token, Config.JWT_SECRET, algorithms=[Config.JWT_ALGORITHM])
         return token_data
 
     except jwt.PyJWTError as e:

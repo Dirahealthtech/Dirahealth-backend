@@ -40,6 +40,7 @@ class Product(Base, TimeStampMixin):
     supplier = relationship("Supplier", back_populates="products")
     order_items = relationship("OrderItem", back_populates="product")
     cart_items = relationship("CartItem", back_populates="product")
+    flash_sales = relationship("FlashSale", secondary="flash_sale_products", back_populates="products")
 
 
     def __repr__(self):
