@@ -7,7 +7,7 @@ from ..core.config import Config
 
 DATABASE_URL = Config.DATABASE_URL
 
-engine = create_async_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_async_engine(DATABASE_URL)
 AsyncSessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
 
