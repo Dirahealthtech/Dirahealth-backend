@@ -37,9 +37,14 @@ class CreatedUserResponse(BaseUser):
         from_attributes = True
 
 
-class UserResponse(BaseUser):
+class UserResponse(BaseModel):
     id: int
+    first_name: str
+    last_name: str
+    email: EmailStr
+    phone_number: str
     is_verified: bool
+    role: str
 
 class BaseAdminUser(BaseModel):
     first_name: str
