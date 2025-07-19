@@ -80,14 +80,6 @@ class PaymentStatus(str, enum.Enum):
     FAILED = "failed"
     REFUNDED = "refunded"
 
-class ProductType(str, enum.Enum):
-    HOSPITAL_EQUIPMENT = "hospital_equipment"
-    UPPER_LIMB_DEVICE = "upper_limb_device"
-    LOWER_LIMB_DEVICE = "lower_limb_device"
-    ACCESSORY = "accessory"
-    CONSUMABLE = "consumable"
-
-
 class DimensionUnit(str, enum.Enum):
     CM = "cm"
     INCH = "inch"
@@ -111,12 +103,6 @@ class ServiceType(str, enum.Enum):
     CONSULTATION = "consultation"
     INSTALLATION = "installation"
     TRAINING = "training"
-
-class DeviceType(str, enum.Enum):
-    UPPER_LIMB = "upper_limb"
-    LOWER_LIMB = "lower_limb"
-    HOSPITAL_EQUIPMENT = "hospital_equipment"
-    GENERAL = "general"
 
 
 class ActivityType(str, enum.Enum):

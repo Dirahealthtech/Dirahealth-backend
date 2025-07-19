@@ -54,19 +54,19 @@ pip install -r requirements.txt
 Create a `.env` file at the root level and include the following:
 
 ```env
-DATABASE_URL=sqlite+aiosqlite:///./db.sqlite3   # development db
-SECRET_KEY=<your-secret_key>
+DATABASE_URL=sqlite+aiosqlite:///./db.sqlite3
+SECRET_KEY=dev-secret-key-change-in-production-12345678901234567890
 JWT_ALGORITHM=HS256
-JWT_SECRET=<your-jwt-secret>
-ACCESS_TOKEN_EXPIRY=3600
-REFRESH_TOKEN_EXPIRY=1
-JTI_EXPIRY=3600
-REDIS_HOST=<your-redis-host>    # if you're using redis cloud
-REDIS_PORT=<your-redis-port>    # if you are using redis locally
-REDIS_PASSWORD=<your-redis-password>    # if you are using redis locally
-MAIL_USERNAME=<mail-username>
-MAIL_PASSWORD=<16-digit-app-password>
-MAIL_FROM=<your-email-address>
+JWT_SECRET=dev-jwt-secret-change-in-production-abcdefghijklmnopqrstuvwxyz
+ACCESS_TOKEN_EXPIRY=604800
+REFRESH_TOKEN_EXPIRY=90
+JTI_EXPIRY=604800
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+MAIL_USERNAME=your-email@gmail.com
+MAIL_PASSWORD=your-app-password
+MAIL_FROM=your-email@gmail.com
 MAIL_PORT=587
 MAIL_SERVER=smtp.gmail.com
 MAIL_FROM_NAME=Dira Healthcare
@@ -74,8 +74,15 @@ MAIL_STARTTLS=True
 MAIL_SSL_TLS=False
 USE_CREDENTIALS=True
 VALIDATE_CERTS=True
-DOMAIN=http://127.0.0.1:8000    # change to production domain when deployed
+DOMAIN=http://127.0.0.1:8000
 ```
+
+**Token Expiry Configuration:**
+- `ACCESS_TOKEN_EXPIRY=604800` (1 week = 604,800 seconds)
+- `REFRESH_TOKEN_EXPIRY=90` (90 days)
+- `JTI_EXPIRY=604800` (1 week = 604,800 seconds)
+
+> **Note**: The example above shows development-ready values. For production, generate secure random keys using the commands in section 4.3.
 
 ### 🔑 4.3 Generate SECRET_KEY and JWT_SECRET
 
@@ -87,19 +94,42 @@ python -c "import secrets; print(secrets.token_urlsafe(32))"    # SECRET_KEY
 python -c "import secrets; print(secrets.token_urlsafe(64))"    # JWT_SECRET
 ```
 
+### 🔐 4.4 Authentication Token Configuration
+
+The API uses JWT-based authentication with the following token lifespans:
+
+| Token Type | Duration | Purpose |
+|------------|----------|---------|
+| **Access Token** | 1 week (604,800 seconds) | Main authentication for API requests |
+| **Refresh Token** | 90 days | Long-term token renewal |
+| **JTI Token** | 1 week (604,800 seconds) | Token tracking and blacklisting |
+
+**Security Benefits:**
+- ✅ Week-long access tokens reduce frequent re-authentication
+- ✅ 90-day refresh tokens provide seamless user experience
+- ✅ Suitable for healthcare applications requiring extended sessions
+- ✅ Tokens can be revoked/blacklisted for security
+
+**Custom Token Duration:**
+To modify token lifespans, update these values in your `.env` file:
+- **1 day**: `ACCESS_TOKEN_EXPIRY=86400`
+- **1 month**: `ACCESS_TOKEN_EXPIRY=2592000`
+- **6 months refresh**: `REFRESH_TOKEN_EXPIRY=180`
+
 ---
 
-### 4.4 Running Database Migrations 🚀
+### 4.5 Running Database Migrations 🚀
 Initialize Alembic (if not already initialized):
 ```bash
 alembic init migrations
 ```
-Apply the migrations:
+Generate and apply the initial migration:
 ```bash
+alembic revision --autogenerate -m "initial migration"
 alembic upgrade head
 ```
 
-### 📦 4.5 Run the API
+### 📦 4.6 Run the API
 
 ```bash
 uvicorn app:app --reload
@@ -107,14 +137,14 @@ uvicorn app:app --reload
 
 This will start the server at [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
-## 4.6 API docs - Swagger, redoc
+## 4.7 API docs - Swagger, redoc
 Once the backend server is running, access the API documentation at:
 - **Swagger UI**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/api/v1/docs)
 - **Redoc**: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/api/v1/redoc)
 
 ---
 
-### 🧠 4.7 Setting Up Redis (Online Version)
+### 🧠 4.8 Setting Up Redis (Online Version)
 
 1. Sign up at a Redis hosting provider like [Redis Cloud](https://cloud.redis.io).
 2. Create a new Redis database and copy the **connection URL** (format: `redis://default:<password>@<host>:<port>`).
@@ -122,7 +152,7 @@ Once the backend server is running, access the API documentation at:
 
 ---
 
-### 📧 4.8 Gmail App Password Setup
+### 📧 4.9 Gmail App Password Setup
 
 To send emails securely using Gmail:
 

@@ -1,8 +1,8 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, Float, ForeignKey, JSON, Enum, Table
+from sqlalchemy import Column, Integer, String, Text, Boolean, Float, ForeignKey, Enum, Table
 from sqlalchemy.orm import relationship
 
 from ..db.base import Base
-from ..enums import DeviceType, ServiceType
+from ..enums import ServiceType
 from app.models.base import TimeStampMixin
 
 
@@ -23,7 +23,6 @@ class Service(Base, TimeStampMixin):
     slug = Column(String, nullable=False, unique=True, index=True)
     description = Column(Text, nullable=False)
     service_type = Column(Enum(ServiceType), nullable=False)
-    device_type = Column(Enum(DeviceType), nullable=False)
     price = Column(Float, nullable=False)
     duration_minutes = Column(Integer, nullable=False)
     image_url = Column(String, nullable=True)
@@ -35,4 +34,4 @@ class Service(Base, TimeStampMixin):
 
 
     def __repr__(self):
-        return f'<Service(name={self.name}, service_type={self.service_type}, device_type={self.device_type})>'
+        return f'<Service(name={self.name}, service_type={self.service_type})>'
