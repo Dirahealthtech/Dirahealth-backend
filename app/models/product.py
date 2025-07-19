@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, Text, Boolean, Float, ForeignKey
 from sqlalchemy.orm import relationship
 
 from ..db.base import Base
-from ..enums import ProductType, WarrantyUnit
+from ..enums import WarrantyUnit
 from ..models.base import TimeStampMixin
 
 
@@ -16,7 +16,6 @@ class Product(Base, TimeStampMixin):
     description = Column(Text, nullable=False)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=False)
     supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=True)
-    product_type = Column(Enum(ProductType), nullable=False)
     sku = Column(String, nullable=False, unique=True)
     price = Column(Float, nullable=False)
     discounted_price = Column(Float, default=0)
@@ -44,4 +43,4 @@ class Product(Base, TimeStampMixin):
 
 
     def __repr__(self):
-        return f"<Product(id={self.id}, category_id={self.category_id}, supplier_id={self.supplier_id}, product_type={self.product_type})>"
+        return f"<Product(id={self.id}, category_id={self.category_id}, supplier_id={self.supplier_id})>"
