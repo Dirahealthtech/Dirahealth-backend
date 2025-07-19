@@ -3,15 +3,15 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.expression import and_, desc, func
 from sqlalchemy.future import select
+from sqlalchemy import update
 from typing import List, Optional
 from uuid import uuid4
 import os
 import shutil
-import traceback
 
 from ..core.dependencies import get_db, RoleChecker
-from ..enums import UserRole, ProductType
-from ..models import Product, Category, User
+from ..enums import UserRole
+from ..models import Category, User
 from ..schemas.product import (
     ProductCreate, 
     ProductResponse, 
@@ -72,10 +72,6 @@ async def setup_initial_admin(user_data: CreateAdminUser, db: AsyncSession = Dep
             raise
             
     except Exception as e:
-        # TODO: REMOVE DEBUGGING STEP
-        print(f"Exception in setup_initial_admin: {str(e)}")
-        print(traceback.format_exc())
-        
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"detail": f"Failed to create admin: {str(e)}"}
@@ -105,7 +101,7 @@ async def create_admin_user(user_data: CreateAdminUser, role: UserRole, db: Asyn
         }
     )
 
-@router.put("/users/{user_id}/role", status_code=status.HTTP_200_OK)
+@router.patch("/users/{user_id}/role", status_code=status.HTTP_200_OK)
 async def update_user_role(
     user_id: int, 
     role: UserRole,
@@ -136,6 +132,66 @@ async def update_user_role(
         )
 
 # Category operations
+@router.post("/categories/{category_id}/image", response_model=CategoryResponse)
+async def upload_category_image(
+    category_id: int,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    _: dict = admin_only  # Admin check
+):
+    """
+    Upload an image for a category - Admin only
+    """
+    try:
+        # Validate file is an image
+        if not file.content_type.startswith("image/"):
+            raise BadRequestException("File provided is not an image")
+        
+        # Check if category exists
+        category = await admin_service.get_category_by_id(category_id, db)
+        
+        # Create directory if it doesn't exist
+        upload_dir = "uploads/categories"
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # Generate unique filename
+        file_extension = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+        new_filename = f"category-{category_id}-{uuid4().hex}.{file_extension}"
+        file_path = f"{upload_dir}/{new_filename}"
+        
+        # Save file
+        try:
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+        except Exception as e:
+            raise BadRequestException(f"Failed to save file: {str(e)}")
+        
+        # Update category image_url
+        image_url = f"/uploads/categories/{new_filename}"
+        
+        # Update the category directly using SQLAlchemy
+        stmt = (
+            update(Category)
+            .where(Category.id == category_id)
+            .values(image_url=image_url)
+            .execution_options(synchronize_session="fetch")
+        )
+        
+        await db.execute(stmt)
+        await db.commit()
+        
+        # Get updated category
+        updated_category = await admin_service.get_category_by_id(category_id, db)
+        
+        return updated_category
+    
+    except NotFoundException as e:
+        raise e
+    except BadRequestException as e:
+        raise e
+    except Exception as e:
+        raise BadRequestException(f"Failed to upload category image: {str(e)}")
+
 @router.post("/categories", response_model=CategoryResponse)
 async def create_category(
     category_data: CategoryCreate,
@@ -177,7 +233,54 @@ async def list_categories(
     result = await db.execute(query)
     categories = result.scalars().all()
     return categories
+ 
+@router.patch("/categories/{category_id}", response_model=CategoryResponse)
+async def update_category(
+    category_id: int,
+    category_data: CategoryUpdate,
+    db: AsyncSession = Depends(get_db),
+    _: dict = admin_only
+):
+    """
+    Update an existing category - **admin only**
+    - **category_id(int)**: the id of the category to update
+    - **name(str)**: Update name of the category
+    - **description(str)**: Update the category description
+    - **parent_id(int)** : Update the parent category for this category
+    - **image_url(str)**: Update the image url for the category
+    - **is_active(bool)**: Update the status of the category i.e True or False
 
+    **NB:** Only the category id is mandatory
+    """
+    try:
+        updated_category = await admin_service.update_category(category_id, category_data, db)
+        return updated_category
+    except NotFoundException as e:
+        raise e
+    except ConflictException as e:
+        raise e
+    except Exception as e:
+        raise BadRequestException(f"Failed to update category: {str(e)}")
+
+@router.delete("/categories/{category_id}")
+async def delete_category(
+    category_id: int,
+    db: AsyncSession = Depends(get_db),
+    _: dict = admin_only
+):
+    """
+    Delete a category by its id
+    Args:
+        - **category_id(int):** Mandatory Category ID for the category to delete
+    """
+    try:
+        await admin_service.delete_category(category_id, db)
+        return {"message": f"Category {category_id} deleted successfully"}
+    except NotFoundException as e:
+        raise e
+    except Exception as e:
+        raise BadRequestException(f"Failed to delete category: {str(e)}")
+        
 @router.post("/products", response_model=ProductResponse)
 async def create_product(
     product_data: ProductCreate,
@@ -204,7 +307,6 @@ async def list_products(
     limit: int = 20,
     name: Optional[str] = None,
     category_id: Optional[int] = None,
-    product_type: Optional[ProductType] = None,
     is_active: Optional[bool] = None,
     requires_prescription: Optional[bool] = None,
     sort_by: str = "id",
@@ -221,7 +323,6 @@ async def list_products(
             limit=limit,
             name=name,
             category_id=category_id,
-            product_type=product_type,
             is_active=is_active,
             requires_prescription=requires_prescription,
             sort_by=sort_by,
@@ -265,7 +366,7 @@ async def get_product(
         raise BadRequestException(f"Failed to retrieve product: {str(e)}")
 
 
-@router.put("/products/{product_id}", response_model=ProductResponse)
+@router.patch("/products/{product_id}", response_model=ProductResponse)
 async def update_product(
     product_id: int,
     product_data: ProductUpdate,
@@ -304,41 +405,75 @@ async def delete_product(
         raise BadRequestException(f"Failed to delete product: {str(e)}")
 
 
-# Upload product image endpoint
-@router.post("/products/{product_id}/image", response_model=ProductResponse)
-async def upload_product_image(
+# Upload multiple product images endpoint
+@router.post("/products/{product_id}/images", response_model=ProductResponse)
+async def upload_product_images(
     product_id: int,
-    file: UploadFile = File(...),
+    files: List[UploadFile] = File(...),
+    replace_existing: bool = Form(False),
+    main_image_index: int = Form(0),
     db: AsyncSession = Depends(get_db),
     _: dict = admin_only  # Admin check
 ):
     """
-    Upload an image for a product - Admin only
+    Upload multiple images for a product - Admin only
+    
+    Args:
+        - **product_id**: ID of the product to update
+        - **files**: List of image files to upload
+        - **replace_existing**: Whether to replace existing images or append to them (default: False)
+        - **main_image_index**: Index of the image that should be marked as main (default: 0)
     """
     try:
-        # Validate file is an image
-        if not file.content_type.startswith("image/"):
-            raise BadRequestException("File provided is not an image")
+        if not files:
+            raise BadRequestException("No files provided")
+        
+        if main_image_index >= len(files) or main_image_index < 0:
+            raise BadRequestException(f"Invalid main_image_index. Must be between 0 and {len(files) - 1}")
+        
+        # Validate all files are images
+        for file in files:
+            if not file.content_type.startswith("image/"):
+                raise BadRequestException(f"File '{file.filename}' is not an image")
         
         # Create directory if it doesn't exist
         upload_dir = "uploads/products"
         os.makedirs(upload_dir, exist_ok=True)
         
-        # Generate unique filename
-        file_extension = file.filename.split(".")[-1]
-        new_filename = f"product-{product_id}-{uuid4().hex}.{file_extension}"
-        file_path = f"{upload_dir}/{new_filename}"
+        # Save all files and collect URLs
+        image_urls = []
+        for i, file in enumerate(files):
+            # Generate unique filename
+            file_extension = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+            new_filename = f"product-{product_id}-{uuid4().hex}.{file_extension}"
+            file_path = f"{upload_dir}/{new_filename}"
+            
+            # Save file
+            try:
+                with open(file_path, "wb") as buffer:
+                    shutil.copyfileobj(file.file, buffer)
+            except Exception as e:
+                # Clean up any already saved files
+                for saved_url in image_urls:
+                    try:
+                        saved_path = saved_url.replace("/uploads/products/", f"{upload_dir}/")
+                        if os.path.exists(saved_path):
+                            os.remove(saved_path)
+                    except:
+                        pass
+                raise BadRequestException(f"Failed to save file '{file.filename}': {str(e)}")
+            
+            image_url = f"/uploads/products/{new_filename}"
+            image_urls.append(image_url)
         
-        # Save file
-        try:
-            with open(file_path, "wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
-        except Exception as e:
-            raise BadRequestException(f"Failed to save file: {str(e)}")
-        
-        # Update product image_url
-        image_url = f"/uploads/products/{new_filename}"
-        updated_product = await admin_service.update_product_image(product_id, image_url, db)
+        # Update product with all images
+        updated_product = await admin_service.update_product_images(
+            product_id, 
+            image_urls, 
+            replace_existing=replace_existing,
+            main_image_index=main_image_index,
+            db=db
+        )
         
         return updated_product
     
@@ -347,11 +482,11 @@ async def upload_product_image(
     except BadRequestException as e:
         raise e
     except Exception as e:
-        raise BadRequestException(f"Failed to upload image: {str(e)}")
+        raise BadRequestException(f"Failed to upload images: {str(e)}")
 
 
 # Batch operations
-@router.put("/products/batch/update-status", status_code=status.HTTP_200_OK)
+@router.patch("/products/batch/update-status", status_code=status.HTTP_200_OK)
 async def batch_update_product_status(
     product_ids: List[int] = Query(...),
     is_active: bool = Query(...),

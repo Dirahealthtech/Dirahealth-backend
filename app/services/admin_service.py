@@ -1,14 +1,14 @@
-from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import update, delete, func, desc, and_
-from typing import List, Optional, Dict, Any, Tuple
+from typing import List, Optional, Tuple
 from uuid import uuid4
 
 from ..models import Product, Category, User
-from ..enums import UserRole, ProductType
+from ..enums import UserRole
 from ..schemas.product import ProductCreate, ProductUpdate
-from ..exceptions import NotFoundException, BadRequestException, ConflictException
+from ..schemas.category import CategoryUpdate
+from ..exceptions import NotFoundException, ConflictException
 
 class AdminService:
     async def generate_unique_slug(self, name: str, product_id: Optional[int], db: AsyncSession) -> str:
@@ -78,7 +78,6 @@ class AdminService:
                 slug=slug,
                 description=product_data.description,
                 category_id=product_data.category_id,
-                product_type=product_data.product_type,
                 sku=product_data.sku,
                 price=product_data.price,
                 discounted_price=product_data.discounted_price,
@@ -139,7 +138,6 @@ class AdminService:
         limit: int,
         name: Optional[str] = None,
         category_id: Optional[int] = None,
-        product_type: Optional[ProductType] = None,
         is_active: Optional[bool] = None,
         requires_prescription: Optional[bool] = None,
         sort_by: str = "id",
@@ -159,8 +157,6 @@ class AdminService:
                 query = query.where(Product.name.ilike(f"%{name}%"))
             if category_id:
                 query = query.where(Product.category_id == category_id)
-            if product_type:
-                query = query.where(Product.product_type == product_type)
             if is_active is not None:
                 query = query.where(Product.is_active == is_active)
             if requires_prescription is not None:
@@ -173,8 +169,6 @@ class AdminService:
                 count_query = count_query.where(Product.name.ilike(f"%{name}%"))
             if category_id:
                 count_query = count_query.where(Product.category_id == category_id)
-            if product_type:
-                count_query = count_query.where(Product.product_type == product_type)
             if is_active is not None:
                 count_query = count_query.where(Product.is_active == is_active)
             if requires_prescription is not None:
@@ -272,30 +266,41 @@ class AdminService:
         except Exception as e:
             await db.rollback()
             raise
-    
-    async def update_product_image(self, product_id: int, image_url: str, db: AsyncSession) -> Product:
+
+
+    async def update_product_images(self, product_id: int, image_urls: List[str], replace_existing: bool = False, main_image_index: int = 0, db: AsyncSession = None) -> Product:
         """
-        Update a product's image URL
+        Update a product's images with multiple URLs
         """
         try:
             # Check if product exists
             product = await self.get_product_by_id(product_id, db)
             
-            # Handle the images JSON structure
-            if product.images is None:
-                # Create a new images array with this as the main image
-                images = [{"url": image_url, "isMain": True}]
+            # Create new images array
+            new_images = []
+            for i, url in enumerate(image_urls):
+                new_images.append({
+                    "url": url,
+                    "isMain": i == main_image_index
+                })
+            
+            if replace_existing or product.images is None:
+                # Replace all existing images
+                images = new_images
             else:
                 # Add to existing images
-                images = product.images
-                has_main = any(img.get("isMain") for img in images)
-                images.append({"url": image_url, "isMain": not has_main})
+                images = product.images.copy()
+                # Remove main flag from existing images if we're adding a new main image
+                if main_image_index < len(new_images):
+                    for img in images:
+                        img["isMain"] = False
+                images.extend(new_images)
             
             # Update the product's images field
             stmt = (
                 update(Product)
                 .where(Product.id == product_id)
-                .values(images=images)  # Use images, not image_url
+                .values(images=images)
                 .execution_options(synchronize_session="fetch")
             )
             
@@ -386,6 +391,141 @@ class AdminService:
             await db.refresh(user)
             
             return user
+        except Exception as e:
+            await db.rollback()
+            raise
+
+    # Category management methods
+    async def get_category_by_id(self, category_id: int, db: AsyncSession) -> Category:
+        """
+        Get a category by its ID
+        """
+        query = select(Category).where(Category.id == category_id)
+        result = await db.execute(query)
+        category = result.scalars().first()
+        
+        if not category:
+            raise NotFoundException(f"Category with ID {category_id} not found")
+        
+        return category
+
+    async def check_category_slug_exists(self, slug: str, category_id: Optional[int], db: AsyncSession) -> bool:
+        """
+        Check if a category slug already exists
+        """
+        query = select(Category).where(Category.slug == slug)
+        
+        # If updating existing category, exclude current category from check
+        if category_id is not None:
+            query = query.where(Category.id != category_id)
+        
+        result = await db.execute(query)
+        existing = result.scalars().first()
+        
+        return existing is not None
+
+    async def generate_category_slug(self, name: str, category_id: Optional[int], db: AsyncSession) -> str:
+        """
+        Generate a unique slug from a category name
+        """
+        # Create base slug
+        slug = name.lower().replace(" ", "-").replace("_", "-")
+        
+        # Remove special characters and multiple dashes
+        import re
+        slug = re.sub(r'[^a-z0-9\-]', '', slug)
+        slug = re.sub(r'-+', '-', slug).strip('-')
+        
+        # Check if slug already exists
+        slug_exists = await self.check_category_slug_exists(slug, category_id, db)
+        
+        if slug_exists:
+            # Add random suffix to make slug unique
+            slug = f"{slug}-{uuid4().hex[:6]}"
+        
+        return slug
+
+    async def update_category(self, category_id: int, category_data: CategoryUpdate, db: AsyncSession) -> Category:
+        """
+        Update a category
+        """
+        try:
+            # Check if category exists
+            category = await self.get_category_by_id(category_id, db)
+            
+            # Check if parent category exists if changing parent
+            if category_data.parent_id is not None:
+                # Prevent setting category as its own parent
+                if category_data.parent_id == category_id:
+                    raise ConflictException("Category cannot be its own parent")
+                
+                # Check if parent category exists
+                await self.get_category_by_id(category_data.parent_id, db)
+            
+            # Update category with non-None fields
+            update_data = category_data.model_dump(exclude_unset=True, exclude_none=True)
+            
+            # If name is updated, update slug too
+            if "name" in update_data:
+                new_slug = await self.generate_category_slug(update_data["name"], category_id, db)
+                update_data["slug"] = new_slug
+            
+            # Update the category
+            stmt = (
+                update(Category)
+                .where(Category.id == category_id)
+                .values(**update_data)
+                .execution_options(synchronize_session="fetch")
+            )
+            
+            await db.execute(stmt)
+            await db.commit()
+            
+            # Refresh category object
+            refreshed = await db.execute(select(Category).where(Category.id == category_id))
+            updated_category = refreshed.scalars().first()
+            
+            return updated_category
+        except Exception as e:
+            await db.rollback()
+            raise
+
+    async def delete_category(self, category_id: int, db: AsyncSession) -> bool:
+        """
+        Delete a category
+        Returns True if successful
+        """
+        try:
+            # Check if category exists
+            category = await self.get_category_by_id(category_id, db)
+            
+            # Check if category has any products
+            products_query = select(func.count()).select_from(Product).where(Product.category_id == category_id)
+            products_result = await db.execute(products_query)
+            products_count = products_result.scalar()
+            
+            if products_count > 0:
+                raise ConflictException(f"Cannot delete category. It has {products_count} associated products. Please reassign or delete the products first.")
+            
+            # Check if category has any child categories
+            children_query = select(func.count()).select_from(Category).where(Category.parent_id == category_id)
+            children_result = await db.execute(children_query)
+            children_count = children_result.scalar()
+            
+            if children_count > 0:
+                raise ConflictException(f"Cannot delete category. It has {children_count} child categories. Please reassign or delete the child categories first.")
+            
+            # Delete the category
+            stmt = (
+                delete(Category)
+                .where(Category.id == category_id)
+                .execution_options(synchronize_session="fetch")
+            )
+            
+            await db.execute(stmt)
+            await db.commit()
+            
+            return True
         except Exception as e:
             await db.rollback()
             raise
