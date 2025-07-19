@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from itsdangerous import URLSafeTimedSerializer
 from jose import jwt
+from jose.exceptions import JWTError
 from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio.session import AsyncSession
@@ -104,7 +105,7 @@ def decode_access_token(token: str) -> dict:
         token_data = jwt.decode(token, Config.JWT_SECRET, algorithms=[Config.JWT_ALGORITHM])
         return token_data
 
-    except jwt.PyJWTError as e:
+    except JWTError as e:
         logging.exception(e)
         return None
 
