@@ -1,14 +1,12 @@
 from pydantic import BaseModel, Field, validator
 from typing import Optional, Dict, Any, List
 from datetime import datetime
-from ..enums import ProductType
 
 class ProductBase(BaseModel):
     name: str
     description: str
     category_id: int
     supplier_id: Optional[int] = None
-    product_type: ProductType
     sku: str
     price: float
     discounted_price: Optional[float] = 0.0
@@ -33,7 +31,6 @@ class ProductUpdate(BaseModel):
     description: Optional[str] = None
     category_id: Optional[int] = None
     supplier_id: Optional[int] = None
-    product_type: Optional[ProductType] = None
     sku: Optional[str] = None
     price: Optional[float] = None
     discounted_price: Optional[float] = None
