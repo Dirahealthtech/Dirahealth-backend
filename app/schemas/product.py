@@ -43,10 +43,11 @@ class ProductUpdate(BaseModel):
     weight: Optional[float] = None
     dimensions: Optional[Dict[str, Any]] = None
     specifications: Optional[Dict[str, Any]] = None
-    warranty_information: Optional[Dict[str, Any]] = None
-    meta_title: Optional[str] = None
-    meta_description: Optional[str] = None
-    meta_keywords: Optional[str] = None
+    tags: Optional[List[str]] = None
+    reorder_level: Optional[int] = None
+    warranty_period: Optional[int] = None
+    warranty_unit: Optional[str] = None
+    warranty_description: Optional[str] = None
 
     @validator('supplier_id', pre=True)
     def validate_supplier_id(cls, v):
