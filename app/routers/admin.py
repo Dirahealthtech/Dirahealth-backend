@@ -208,7 +208,7 @@ async def create_category(
             slug=category_data.name.lower().replace(" ", "-"),
             description=category_data.description,
             parent_id=category_data.parent_id,
-            image_url=category_data.image_url,
+            image=category_data.image,
             is_active=True
         )
         
