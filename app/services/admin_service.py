@@ -68,9 +68,13 @@ class AdminService:
             # Handle images
             images_data = None
             if hasattr(product_data, 'images') and product_data.images:
-                images_data = product_data.images
+                # If images is a list, join with commas
+                if isinstance(product_data.images, list):
+                    images_data = ",".join(product_data.images)
+                else:
+                    images_data = product_data.images
             elif hasattr(product_data, 'image_url') and product_data.image_url:
-                images_data = [{"url": product_data.image_url, "isMain": True}]
+                images_data = product_data.image_url
             
             # Create new product
             new_product = Product(
@@ -193,7 +197,6 @@ class AdminService:
             
             return products, total_count
         except Exception as e:
-            # TODO: REMOVE DEBUGGING STEP
             print(f"Error listing products: {e}")
             return [], 0
     
@@ -217,6 +220,10 @@ class AdminService:
             
             # Update product with non-None fields
             update_data = product_data.model_dump(exclude_unset=True, exclude_none=True)
+            
+            # Handle supplier_id = 0 as None (no supplier)
+            if "supplier_id" in update_data and update_data["supplier_id"] == 0:
+                update_data["supplier_id"] = None
             
             # If name is updated, update slug too
             if "name" in update_data:
@@ -263,55 +270,6 @@ class AdminService:
             await db.commit()
             
             return True
-        except Exception as e:
-            await db.rollback()
-            raise
-
-
-    async def update_product_images(self, product_id: int, image_urls: List[str], replace_existing: bool = False, main_image_index: int = 0, db: AsyncSession = None) -> Product:
-        """
-        Update a product's images with multiple URLs
-        """
-        try:
-            # Check if product exists
-            product = await self.get_product_by_id(product_id, db)
-            
-            # Create new images array
-            new_images = []
-            for i, url in enumerate(image_urls):
-                new_images.append({
-                    "url": url,
-                    "isMain": i == main_image_index
-                })
-            
-            if replace_existing or product.images is None:
-                # Replace all existing images
-                images = new_images
-            else:
-                # Add to existing images
-                images = product.images.copy()
-                # Remove main flag from existing images if we're adding a new main image
-                if main_image_index < len(new_images):
-                    for img in images:
-                        img["isMain"] = False
-                images.extend(new_images)
-            
-            # Update the product's images field
-            stmt = (
-                update(Product)
-                .where(Product.id == product_id)
-                .values(images=images)
-                .execution_options(synchronize_session="fetch")
-            )
-            
-            await db.execute(stmt)
-            await db.commit()
-            
-            # Refresh product object
-            refreshed = await db.execute(select(Product).where(Product.id == product_id))
-            updated_product = refreshed.scalars().first()
-            
-            return updated_product
         except Exception as e:
             await db.rollback()
             raise
