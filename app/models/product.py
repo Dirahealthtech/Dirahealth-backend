@@ -21,7 +21,7 @@ class Product(Base, TimeStampMixin):
     discounted_price = Column(Float, default=0)
     tax_rate = Column(Float, default=0)
     stock = Column(Integer, nullable=False, default=0)
-    images = Column(JSON)  # Stores array of image objects with URL and isMain flag
+    images = Column(String)  # Stores image URL(s) as string
     specifications = Column(JSON)  # Stores specifications as key-value pairs
     requires_prescription = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)

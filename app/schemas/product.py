@@ -14,14 +14,15 @@ class ProductBase(BaseModel):
     stock: int = 0
     requires_prescription: bool = False
     is_active: bool = True
-    image_url: Optional[str] = None
+    images: Optional[str] = None
     weight: Optional[float] = None
     dimensions: Optional[Dict[str, Any]] = None
     specifications: Optional[Dict[str, Any]] = None
-    warranty_information: Optional[Dict[str, Any]] = None
-    meta_title: Optional[str] = None
-    meta_description: Optional[str] = None
-    meta_keywords: Optional[str] = None
+    tags: Optional[List[str]] = None
+    reorder_level: Optional[int] = None
+    warranty_period: Optional[int] = None
+    warranty_unit: Optional[str] = None
+    warranty_description: Optional[str] = None
 
 class ProductCreate(ProductBase):
     pass
@@ -38,14 +39,22 @@ class ProductUpdate(BaseModel):
     stock: Optional[int] = None
     requires_prescription: Optional[bool] = None
     is_active: Optional[bool] = None
-    image_url: Optional[str] = None
+    images: Optional[str] = None
     weight: Optional[float] = None
     dimensions: Optional[Dict[str, Any]] = None
     specifications: Optional[Dict[str, Any]] = None
-    warranty_information: Optional[Dict[str, Any]] = None
-    meta_title: Optional[str] = None
-    meta_description: Optional[str] = None
-    meta_keywords: Optional[str] = None
+    tags: Optional[List[str]] = None
+    reorder_level: Optional[int] = None
+    warranty_period: Optional[int] = None
+    warranty_unit: Optional[str] = None
+    warranty_description: Optional[str] = None
+
+    @validator('supplier_id', pre=True)
+    def validate_supplier_id(cls, v):
+        """Convert supplier_id of 0 to None (no supplier)"""
+        if v == 0:
+            return None
+        return v
 
 class ProductResponse(ProductBase):
     id: int

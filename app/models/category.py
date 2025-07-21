@@ -12,7 +12,7 @@ class Category(Base, TimeStampMixin):
     slug = Column(String, nullable=False, unique=True, index=True)
     description = Column(Text, nullable=True)
     parent_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
-    image_url = Column(String, nullable=True)
+    image = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
 
     # Relationships

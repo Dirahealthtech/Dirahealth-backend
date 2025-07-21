@@ -1,13 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile, Form
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.expression import and_, desc, func
 from sqlalchemy.future import select
 from sqlalchemy import update
 from typing import List, Optional
-from uuid import uuid4
-import os
-import shutil
 
 from ..core.dependencies import get_db, RoleChecker
 from ..enums import UserRole
@@ -35,8 +32,10 @@ auth_service = AuthService()
 @router.post("/setup-initial-admin", status_code=status.HTTP_201_CREATED)
 async def setup_initial_admin(user_data: CreateAdminUser, db: AsyncSession = Depends(get_db)):
     """
-    Initial setup only: Create the first admin user
-    This endpoint should be secured or disabled in production
+    Creates the first admin user for the system. This endpoint should only be used during initial setup
+    and should be secured or disabled in production.
+
+    - **user_data**: Admin user creation data including name, email, and password
     """
     try:
         # Check if any admin user already exists
@@ -82,8 +81,14 @@ async def setup_initial_admin(user_data: CreateAdminUser, db: AsyncSession = Dep
 @router.post("/users", dependencies=[admin_only], status_code=status.HTTP_201_CREATED)
 async def create_admin_user(user_data: CreateAdminUser, role: UserRole, db: AsyncSession = Depends(get_db)):
     """
-    Create a new user with specified role
-    NB -> An admin only endpoint
+    **Create New User with Specified Role**
+    
+    Creates a new user account with admin-specified role. Only accessible by admin users.
+    
+    **Args:**
+
+    - **user_data**: User creation data (name, email, password)
+    - **role**: User role to assign (admin, customer, etc.)
     """
     user_data_dict = user_data.model_dump()
     user_data_dict["role"] = role
@@ -109,7 +114,14 @@ async def update_user_role(
     _: dict = admin_only  # Admin check
 ):
     """
-    Update a user's role - Admin only
+    **Update User Role**
+    
+    Updates an existing user's role. Only accessible by admin users.
+    
+    **Args:**
+
+    - **user_id**: ID of the user to update
+    - **role**: New role to assign to the user
     """
     try:
         updated_user = await admin_service.update_user_role(user_id, role, db)
@@ -132,66 +144,6 @@ async def update_user_role(
         )
 
 # Category operations
-@router.post("/categories/{category_id}/image", response_model=CategoryResponse)
-async def upload_category_image(
-    category_id: int,
-    file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
-    _: dict = admin_only  # Admin check
-):
-    """
-    Upload an image for a category - Admin only
-    """
-    try:
-        # Validate file is an image
-        if not file.content_type.startswith("image/"):
-            raise BadRequestException("File provided is not an image")
-        
-        # Check if category exists
-        category = await admin_service.get_category_by_id(category_id, db)
-        
-        # Create directory if it doesn't exist
-        upload_dir = "uploads/categories"
-        os.makedirs(upload_dir, exist_ok=True)
-        
-        # Generate unique filename
-        file_extension = file.filename.split(".")[-1] if "." in file.filename else "jpg"
-        new_filename = f"category-{category_id}-{uuid4().hex}.{file_extension}"
-        file_path = f"{upload_dir}/{new_filename}"
-        
-        # Save file
-        try:
-            with open(file_path, "wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
-        except Exception as e:
-            raise BadRequestException(f"Failed to save file: {str(e)}")
-        
-        # Update category image_url
-        image_url = f"/uploads/categories/{new_filename}"
-        
-        # Update the category directly using SQLAlchemy
-        stmt = (
-            update(Category)
-            .where(Category.id == category_id)
-            .values(image_url=image_url)
-            .execution_options(synchronize_session="fetch")
-        )
-        
-        await db.execute(stmt)
-        await db.commit()
-        
-        # Get updated category
-        updated_category = await admin_service.get_category_by_id(category_id, db)
-        
-        return updated_category
-    
-    except NotFoundException as e:
-        raise e
-    except BadRequestException as e:
-        raise e
-    except Exception as e:
-        raise BadRequestException(f"Failed to upload category image: {str(e)}")
-
 @router.post("/categories", response_model=CategoryResponse)
 async def create_category(
     category_data: CategoryCreate,
@@ -199,7 +151,21 @@ async def create_category(
     _: dict = admin_only
 ):
     """
-    Create a new category - Admin only
+    **Create New Category**
+    
+    Creates a new product category. Categories are used to organize products into logical groups.
+    
+    **Args:**
+
+    - **category_data**: Category creation data including name, description, parent_id, and image
+        
+    **Returns:**
+    - Created category details with generated slug and ID
+        
+    **Features:**
+    - Auto-generates URL-friendly slug from category name
+    - Supports hierarchical categories with parent_id
+    - Optional image URL for category display
     """
     try:
         # Create a category
@@ -208,7 +174,7 @@ async def create_category(
             slug=category_data.name.lower().replace(" ", "-"),
             description=category_data.description,
             parent_id=category_data.parent_id,
-            image_url=category_data.image_url,
+            image=category_data.image,
             is_active=True
         )
         
@@ -227,7 +193,14 @@ async def list_categories(
     limit: int = 100
 ):
     """
-    List all categories
+    **List All Categories**
+    
+    Retrieves a paginated list of all product categories. Accessible by all authenticated users.
+    
+    **Query Parameters:**
+
+    - **skip**: Number of categories to skip (for pagination) - Default: 0
+    - **limit**: Maximum number of categories to return - Default: 100, Max: 100
     """
     query = select(Category).offset(skip).limit(limit)
     result = await db.execute(query)
@@ -242,15 +215,21 @@ async def update_category(
     _: dict = admin_only
 ):
     """
-    Update an existing category - **admin only**
-    - **category_id(int)**: the id of the category to update
-    - **name(str)**: Update name of the category
-    - **description(str)**: Update the category description
-    - **parent_id(int)** : Update the parent category for this category
-    - **image_url(str)**: Update the image url for the category
-    - **is_active(bool)**: Update the status of the category i.e True or False
+    **Update Category**
+    
+    Updates an existing category's information. Supports partial updates with automatic slug generation.
+    
+    **Path Parameters:**
 
-    **NB:** Only the category id is mandatory
+    - **category_id**: ID of the category to update
+        
+    **Request Body:**
+
+    - **name**: Update category name (optional)
+    - **description**: Update category description (optional)
+    - **parent_id**: Update parent category (optional, use null for root category)
+    - **image**: Update category image (optional)
+    - **is_active**: Update category status (optional)
     """
     try:
         updated_category = await admin_service.update_category(category_id, category_data, db)
@@ -269,9 +248,16 @@ async def delete_category(
     _: dict = admin_only
 ):
     """
-    Delete a category by its id
-    Args:
-        - **category_id(int):** Mandatory Category ID for the category to delete
+    **Delete Category**
+    
+    Deletes a category if it has no associated products or child categories.
+    
+    **Path Parameters:**
+
+    - **category_id**: ID of the category to delete
+        
+    **Returns:**
+    - Success message confirming deletion
     """
     try:
         await admin_service.delete_category(category_id, db)
@@ -288,7 +274,43 @@ async def create_product(
     _: dict = admin_only  # Admin check
 ):
     """
-    Create a new product - Admin only
+    **Create New Product**
+    
+    Creates a new product in the healthcare inventory system. Handles comprehensive product data
+    including pricing, inventory, specifications, and image management.
+    
+    **Request Body Fields:**
+
+    - **name**: Product name (required)
+    - **description**: Detailed product description (required)
+    - **category_id**: ID of the product category (required)
+    - **sku**: Stock Keeping Unit - unique identifier (required)
+    - **price**: Base price of the product (required)
+    - **stock**: Current stock quantity (required)
+    - **discounted_price**: Sale price (optional)
+    - **tax_rate**: Tax percentage (optional)
+    - **requires_prescription**: Whether prescription is needed (default: false)
+    - **is_active**: Product availability status (default: true)
+    - **supplier_id**: Associated supplier ID (optional)
+    - **images**: Comma-separated images (optional)
+    - **weight**: Product weight (optional)
+    - **dimensions**: Product dimensions as JSON (optional)
+    - **specifications**: Technical specifications as JSON (optional)
+    - **tags**: Product tags as JSON array (optional)
+    - **reorder_level**: Minimum stock for reorder alerts (optional)
+    - **warranty_period**: Warranty duration (optional)
+    - **warranty_unit**: Warranty time unit (months/years) (optional)
+    - **warranty_description**: Warranty details (optional)
+        
+    **Returns:**
+
+    - Created product with generated ID and slug
+        
+    **Raises:**
+    - **403**: If not admin user
+    - **404**: If category doesn't exist
+    - **409**: If SKU already exists
+    - **400**: If validation fails or creation errors
     """
     try:
         new_product = await admin_service.create_product(product_data, db)
@@ -315,7 +337,29 @@ async def list_products(
     _: dict = admin_only  # Admin check
 ):
     """
-    List all products with filtering and sorting - Admin only
+    **List Products with Advanced Filtering**
+    
+    Retrieves a paginated and filtered list of products with comprehensive search and sorting capabilities.
+    
+    **Query Parameters:**
+
+    - **skip**: Number of products to skip for pagination (default: 0)
+    - **limit**: Maximum products to return (default: 20, max: 100)
+    - **name**: Filter by product name (partial match, case-insensitive)
+    - **category_id**: Filter by specific category ID
+    - **is_active**: Filter by product status (true/false)
+    - **requires_prescription**: Filter by prescription requirement (true/false)
+    - **sort_by**: Field to sort by (id, name, price, stock, created_at, etc.)
+    - **sort_order**: Sort direction (asc/desc, default: asc)
+        
+    **Returns:**
+
+    - Paginated product list with metadata:
+        - **items**: Array of product objects
+        - **total**: Total number of matching products
+        - **page**: Current page number
+        - **size**: Items per page
+        - **pages**: Total number of pages
     """
     try:
         products, total_count = await admin_service.list_products(
@@ -355,7 +399,13 @@ async def get_product(
     _: dict = admin_only  # Admin check
 ):
     """
-    Get a specific product by ID - Admin only
+    **Get Product Details**
+    
+    Retrieves comprehensive details for a specific product by its ID.
+    
+    **Path Parameters:**
+
+    - **product_id**: Unique identifier of the product
     """
     try:
         product = await admin_service.get_product_by_id(product_id, db)
@@ -374,7 +424,37 @@ async def update_product(
     _: dict = admin_only  # Admin check
 ):
     """
-    Update a specific product - Admin only
+    **Update Product**
+    
+    Updates an existing product with partial data. Supports updating any product field while
+    maintaining data integrity and business rules.
+    
+    **Path Parameters:**
+
+    - **product_id**: ID of the product to update
+        
+    **Request Body:** (All fields optional for partial updates)
+
+    - **name**: Update product name
+    - **description**: Update product description
+    - **category_id**: Change product category
+    - **sku**: Update SKU (must remain unique)
+    - **price**: Update base price
+    - **discounted_price**: Update sale price
+    - **tax_rate**: Update tax percentage
+    - **stock**: Update stock quantity
+    - **images**: Update images (comma-separated)
+    - **requires_prescription**: Update prescription requirement
+    - **is_active**: Update product status
+    - **supplier_id**: Change associated supplier
+    - **weight**: Update product weight
+    - **dimensions**: Update product dimensions
+    - **specifications**: Update technical specifications
+    - **tags**: Update product tags
+    - **reorder_level**: Update reorder threshold
+    - **warranty_period**: Update warranty duration
+    - **warranty_unit**: Update warranty time unit
+    - **warranty_description**: Update warranty details
     """
     try:
         updated_product = await admin_service.update_product(product_id, product_data, db)
@@ -403,86 +483,6 @@ async def delete_product(
         raise e
     except Exception as e:
         raise BadRequestException(f"Failed to delete product: {str(e)}")
-
-
-# Upload multiple product images endpoint
-@router.post("/products/{product_id}/images", response_model=ProductResponse)
-async def upload_product_images(
-    product_id: int,
-    files: List[UploadFile] = File(...),
-    replace_existing: bool = Form(False),
-    main_image_index: int = Form(0),
-    db: AsyncSession = Depends(get_db),
-    _: dict = admin_only  # Admin check
-):
-    """
-    Upload multiple images for a product - Admin only
-    
-    Args:
-        - **product_id**: ID of the product to update
-        - **files**: List of image files to upload
-        - **replace_existing**: Whether to replace existing images or append to them (default: False)
-        - **main_image_index**: Index of the image that should be marked as main (default: 0)
-    """
-    try:
-        if not files:
-            raise BadRequestException("No files provided")
-        
-        if main_image_index >= len(files) or main_image_index < 0:
-            raise BadRequestException(f"Invalid main_image_index. Must be between 0 and {len(files) - 1}")
-        
-        # Validate all files are images
-        for file in files:
-            if not file.content_type.startswith("image/"):
-                raise BadRequestException(f"File '{file.filename}' is not an image")
-        
-        # Create directory if it doesn't exist
-        upload_dir = "uploads/products"
-        os.makedirs(upload_dir, exist_ok=True)
-        
-        # Save all files and collect URLs
-        image_urls = []
-        for i, file in enumerate(files):
-            # Generate unique filename
-            file_extension = file.filename.split(".")[-1] if "." in file.filename else "jpg"
-            new_filename = f"product-{product_id}-{uuid4().hex}.{file_extension}"
-            file_path = f"{upload_dir}/{new_filename}"
-            
-            # Save file
-            try:
-                with open(file_path, "wb") as buffer:
-                    shutil.copyfileobj(file.file, buffer)
-            except Exception as e:
-                # Clean up any already saved files
-                for saved_url in image_urls:
-                    try:
-                        saved_path = saved_url.replace("/uploads/products/", f"{upload_dir}/")
-                        if os.path.exists(saved_path):
-                            os.remove(saved_path)
-                    except:
-                        pass
-                raise BadRequestException(f"Failed to save file '{file.filename}': {str(e)}")
-            
-            image_url = f"/uploads/products/{new_filename}"
-            image_urls.append(image_url)
-        
-        # Update product with all images
-        updated_product = await admin_service.update_product_images(
-            product_id, 
-            image_urls, 
-            replace_existing=replace_existing,
-            main_image_index=main_image_index,
-            db=db
-        )
-        
-        return updated_product
-    
-    except NotFoundException as e:
-        raise e
-    except BadRequestException as e:
-        raise e
-    except Exception as e:
-        raise BadRequestException(f"Failed to upload images: {str(e)}")
 
 
 # Batch operations
