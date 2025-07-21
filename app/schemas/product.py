@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, field_validator
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 
@@ -49,7 +49,8 @@ class ProductUpdate(BaseModel):
     warranty_unit: Optional[str] = None
     warranty_description: Optional[str] = None
 
-    @validator('supplier_id', pre=True)
+    @field_validator('supplier_id', mode='before')
+    @classmethod
     def validate_supplier_id(cls, v):
         """Convert supplier_id of 0 to None (no supplier)"""
         if v == 0:
