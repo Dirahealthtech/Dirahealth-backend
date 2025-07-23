@@ -84,13 +84,6 @@ class DimensionUnit(str, enum.Enum):
     CM = "cm"
     INCH = "inch"
 
-
-class WarrantyUnit(str, enum.Enum):
-    DAYS = "days"
-    MONTHS = "months"
-    YEARS = "years"
-
-
 class SupplierStatus(str, enum.Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"

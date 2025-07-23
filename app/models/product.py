@@ -2,7 +2,6 @@ from sqlalchemy import Column, Integer, String, Text, Boolean, Float, ForeignKey
 from sqlalchemy.orm import relationship
 
 from ..db.base import Base
-from ..enums import WarrantyUnit
 from ..models.base import TimeStampMixin
 
 
@@ -30,7 +29,7 @@ class Product(Base, TimeStampMixin):
     tags = Column(JSON, nullable=True)  # Stores array of tag strings
     reorder_level = Column(Integer, nullable=True)
     warranty_period = Column(Integer, nullable=True)
-    warranty_unit = Column(Enum(WarrantyUnit), nullable=True, default=WarrantyUnit.MONTHS)
+    warranty_unit = Column(String, nullable=True)
     warranty_description = Column(Text, nullable=True)
 
     # Relationships

@@ -8,7 +8,7 @@ from ..models import Product, Category, User
 from ..enums import UserRole
 from ..schemas.product import ProductCreate, ProductUpdate
 from ..schemas.category import CategoryUpdate
-from ..exceptions import NotFoundException, ConflictException
+from ..exceptions import NotFoundException, ConflictException, BadRequestException
 
 class AdminService:
     async def generate_unique_slug(self, name: str, product_id: Optional[int], db: AsyncSession) -> str:
@@ -51,54 +51,72 @@ class AdminService:
     
     async def create_product(self, product_data: ProductCreate, db: AsyncSession) -> Product:
         """
-        Create a new product with transaction management
+        Create a new product with structured data and transaction management
         """
         try:
             # Check if category exists
             await self.check_category_exists(product_data.category_id, db)
             
             # Check if SKU already exists
-            sku_exists = await self.check_sku_exists(product_data.sku, None, db)
+            sku_exists = await self.check_sku_exists(product_data.inventory.sku, None, db)
             if sku_exists:
-                raise ConflictException(f"Product with SKU {product_data.sku} already exists")
+                raise ConflictException(f"Product with SKU {product_data.inventory.sku} already exists")
             
             # Generate unique slug
             slug = await self.generate_unique_slug(product_data.name, None, db)
             
-            # Handle images
-            images_data = None
-            if hasattr(product_data, 'images') and product_data.images:
-                # If images is a list, join with commas
-                if isinstance(product_data.images, list):
-                    images_data = ",".join(product_data.images)
-                else:
-                    images_data = product_data.images
-            elif hasattr(product_data, 'image_url') and product_data.image_url:
-                images_data = product_data.image_url
+            # Extract data from structured format
+            pricing = product_data.pricing
+            inventory = product_data.inventory
+            shipping = product_data.shipping
+            warranty = product_data.warranty
+            metadata = product_data.metadata
             
-            # Create new product
+            # Handle dimensions
+            dimensions_data = None
+            if shipping and shipping.dimensions:
+                dimensions_data = {
+                    "length": shipping.dimensions.length,
+                    "width": shipping.dimensions.width,
+                    "height": shipping.dimensions.height,
+                    "unit": shipping.dimensions.unit
+                }
+            
+            # Create new product with structured data
             new_product = Product(
                 name=product_data.name,
                 slug=slug,
-                description=product_data.description,
+                description=product_data.description,  # Already sanitized by validator
                 category_id=product_data.category_id,
-                sku=product_data.sku,
-                price=product_data.price,
-                discounted_price=product_data.discounted_price,
-                tax_rate=product_data.tax_rate,
-                stock=product_data.stock,
-                requires_prescription=product_data.requires_prescription,
-                is_active=product_data.is_active,
                 supplier_id=product_data.supplier_id,
-                images=images_data,
-                weight=product_data.weight if hasattr(product_data, 'weight') else None,
-                dimensions=product_data.dimensions if hasattr(product_data, 'dimensions') else None,
-                specifications=product_data.specifications if hasattr(product_data, 'specifications') else None,
-                tags=product_data.tags if hasattr(product_data, 'tags') else None,
-                reorder_level=product_data.reorder_level if hasattr(product_data, 'reorder_level') else None,
-                warranty_period=product_data.warranty_period if hasattr(product_data, 'warranty_period') else None,
-                warranty_unit=product_data.warranty_unit if hasattr(product_data, 'warranty_unit') else None,
-                warranty_description=product_data.warranty_description if hasattr(product_data, 'warranty_description') else None
+                
+                # Pricing fields
+                price=pricing.price,
+                discounted_price=pricing.discounted_price,
+                tax_rate=pricing.tax_rate,
+                
+                # Inventory fields
+                sku=inventory.sku,
+                stock=inventory.stock,
+                reorder_level=inventory.reorder_level,
+                requires_prescription=inventory.requires_prescription,
+                is_active=inventory.is_active,
+                
+                # Images
+                images=product_data.images,
+                
+                # Shipping fields
+                weight=shipping.weight if shipping else None,
+                dimensions=dimensions_data,
+                
+                # Warranty fields
+                warranty_period=warranty.period if warranty else None,
+                warranty_unit=warranty.unit if warranty else None,
+                warranty_description=warranty.description if warranty else None,
+                
+                # Metadata fields
+                specifications=metadata.specifications if metadata else None,
+                tags=metadata.tags if metadata else None,
             )
             
             db.add(new_product)
@@ -106,9 +124,15 @@ class AdminService:
             await db.refresh(new_product)
             
             return new_product
+            
+        except ConflictException:
+            raise
+        except NotFoundException:
+            raise
         except Exception as e:
             await db.rollback()
-            raise
+            print(f"Error creating product: {e}")
+            raise BadRequestException(f"Failed to create product: {str(e)}")
 
     async def get_product_by_id(self, product_id: int, db: AsyncSession) -> Product:
         """
@@ -202,7 +226,7 @@ class AdminService:
     
     async def update_product(self, product_id: int, product_data: ProductUpdate, db: AsyncSession) -> Product:
         """
-        Update a product
+        Update a product with structured data
         """
         try:
             # Check if product exists
@@ -212,34 +236,99 @@ class AdminService:
             if product_data.category_id is not None:
                 await self.check_category_exists(product_data.category_id, db)
             
-            # Check if SKU exists if changing SKU
-            if product_data.sku is not None and product_data.sku != product.sku:
-                sku_exists = await self.check_sku_exists(product_data.sku, product_id, db)
+            # Check if SKU exists if changing SKU (from inventory structure)
+            if (product_data.inventory and 
+                product_data.inventory.sku is not None and 
+                product_data.inventory.sku != product.sku):
+                sku_exists = await self.check_sku_exists(product_data.inventory.sku, product_id, db)
                 if sku_exists:
-                    raise ConflictException(f"Product with SKU {product_data.sku} already exists")
+                    raise ConflictException(f"Product with SKU {product_data.inventory.sku} already exists")
             
-            # Update product with non-None fields
-            update_data = product_data.model_dump(exclude_unset=True, exclude_none=True)
+            # Build update dictionary from structured data
+            update_data = {}
             
-            # Handle supplier_id = 0 as None (no supplier)
-            if "supplier_id" in update_data and update_data["supplier_id"] == 0:
-                update_data["supplier_id"] = None
-            
-            # If name is updated, update slug too
-            if "name" in update_data:
-                new_slug = await self.generate_unique_slug(update_data["name"], product_id, db)
+            # Basic fields
+            if product_data.name is not None:
+                update_data["name"] = product_data.name
+                # Generate new slug if name is updated
+                new_slug = await self.generate_unique_slug(product_data.name, product_id, db)
                 update_data["slug"] = new_slug
             
-            # Update the product
-            stmt = (
-                update(Product)
-                .where(Product.id == product_id)
-                .values(**update_data)
-                .execution_options(synchronize_session="fetch")
-            )
+            if product_data.description is not None:
+                update_data["description"] = product_data.description  # Already sanitized by validator
             
-            await db.execute(stmt)
-            await db.commit()
+            if product_data.category_id is not None:
+                update_data["category_id"] = product_data.category_id
+            
+            if product_data.supplier_id is not None:
+                # Handle supplier_id = 0 as None (no supplier)
+                update_data["supplier_id"] = None if product_data.supplier_id == 0 else product_data.supplier_id
+            
+            if product_data.images is not None:
+                update_data["images"] = product_data.images
+            
+            # Pricing data
+            if product_data.pricing:
+                if product_data.pricing.price is not None:
+                    update_data["price"] = product_data.pricing.price
+                if product_data.pricing.discounted_price is not None:
+                    update_data["discounted_price"] = product_data.pricing.discounted_price
+                if product_data.pricing.tax_rate is not None:
+                    update_data["tax_rate"] = product_data.pricing.tax_rate
+            
+            # Inventory data
+            if product_data.inventory:
+                if product_data.inventory.sku is not None:
+                    update_data["sku"] = product_data.inventory.sku
+                if product_data.inventory.stock is not None:
+                    update_data["stock"] = product_data.inventory.stock
+                if product_data.inventory.reorder_level is not None:
+                    update_data["reorder_level"] = product_data.inventory.reorder_level
+                if product_data.inventory.requires_prescription is not None:
+                    update_data["requires_prescription"] = product_data.inventory.requires_prescription
+                if product_data.inventory.is_active is not None:
+                    update_data["is_active"] = product_data.inventory.is_active
+            
+            # Shipping data
+            if product_data.shipping:
+                if product_data.shipping.weight is not None:
+                    update_data["weight"] = product_data.shipping.weight
+                if product_data.shipping.dimensions is not None:
+                    dimensions_data = {
+                        "length": product_data.shipping.dimensions.length,
+                        "width": product_data.shipping.dimensions.width,
+                        "height": product_data.shipping.dimensions.height,
+                        "unit": product_data.shipping.dimensions.unit
+                    }
+                    update_data["dimensions"] = dimensions_data
+            
+            # Warranty data
+            if product_data.warranty:
+                if product_data.warranty.period is not None:
+                    update_data["warranty_period"] = product_data.warranty.period
+                if product_data.warranty.unit is not None:
+                    update_data["warranty_unit"] = product_data.warranty.unit
+                if product_data.warranty.description is not None:
+                    update_data["warranty_description"] = product_data.warranty.description
+            
+            # Metadata
+            if product_data.metadata:
+                if product_data.metadata.specifications is not None:
+                    update_data["specifications"] = product_data.metadata.specifications
+                if product_data.metadata.tags is not None:
+                    update_data["tags"] = product_data.metadata.tags
+            
+            # Only update if there are fields to update
+            if update_data:
+                stmt = (
+                    update(Product)
+                    .where(Product.id == product_id)
+                    .values(**update_data)
+                    .execution_options(synchronize_session="fetch")
+                )
+                
+                await db.execute(stmt)
+                await db.commit()
             
             # Refresh product object
             refreshed = await db.execute(select(Product).where(Product.id == product_id))
