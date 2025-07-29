@@ -189,13 +189,21 @@ class ProductResponse(BaseModel):
     @classmethod
     def map_flat_to_nested(cls, data):
         """Map flat database fields to nested schema structure"""
+        # Handle None data
+        if data is None:
+            raise ValueError("Product data cannot be None")
+        
+        # Convert SQLAlchemy model to dict if needed
         if hasattr(data, '__dict__'):
-            # Convert SQLAlchemy model to dict
             data_dict = {}
             for key, value in data.__dict__.items():
                 if not key.startswith('_'):
                     data_dict[key] = value
             data = data_dict
+        
+        # Ensure data is a dictionary
+        if not isinstance(data, dict):
+            raise ValueError(f"Expected dict or SQLAlchemy model, got {type(data)}")
         
         # Map pricing fields
         data['pricing'] = {

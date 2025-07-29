@@ -5,7 +5,9 @@ from typing import List, Optional
 from ..core.dependencies import get_anonymous_user, get_db
 from ..models import User
 from ..schemas.product import ProductResponse
+from ..schemas.category import CategoryResponse
 from ..services.user_activity_service import UserActivityService
+from ..exceptions import NotFoundException
 
 
 router = APIRouter(prefix='/activity')
@@ -62,4 +64,30 @@ async def get_product_details_by_slug(
     slug: str,
     service: UserActivityService = Depends(get_user_activity_service),
 ):
-    return await service.get_product_by_slug(slug)
+    try:
+        result  = await service.get_product_by_slug(slug)
+        return result
+    except NotFoundException as e:
+        raise e
+    except Exception as e:
+        raise e
+
+
+@router.get("/categories", response_model=List[CategoryResponse])
+async def list_categories(
+    service: UserActivityService = Depends(get_user_activity_service),
+    skip: int = 0,
+    limit: int = 100
+):
+    """
+    **List All Categories**
+    
+    Retrieves a paginated list of all product categories.
+    
+    **Query Parameters:**
+
+    - **skip**: Number of categories to skip (for pagination) - Default: 0
+    - **limit**: Maximum number of categories to return - Default: 100, Max: 100
+    """
+    categories = await service.get_product_categories(skip, limit)
+    return categories
