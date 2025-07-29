@@ -37,6 +37,8 @@ class CustomAuthMiddleWare(BaseHTTPMiddleware):
             f"/api/{api_version}/auth/reset-password",
             f"/api/{api_version}/auth/confirm-reset-password",
             f"/api/{api_version}/admin/setup-initial-admin",
+            f"/api/{api_version}/admin/categories",
+            f"/api/{api_version}/reviews/product"
         ]
 
 
