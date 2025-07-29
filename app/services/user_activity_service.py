@@ -114,10 +114,3 @@ class UserActivityService:
         # Return just the Product instances
         return [row[0] for row in sorted_products[:limit]]
 
-
-    async def get_product_categories(self, skip, limit):
-        query = select(Category).offset(skip).limit(limit)
-        result = await self.db.execute(query)
-        categories = result.scalars().all()
-        return categories
-
