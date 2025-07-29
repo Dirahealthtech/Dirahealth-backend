@@ -5,7 +5,9 @@ from typing import List, Optional
 from ..core.dependencies import get_anonymous_user, get_db
 from ..models import User
 from ..schemas.product import ProductResponse
+from ..schemas.category import CategoryResponse
 from ..services.user_activity_service import UserActivityService
+from ..exceptions import NotFoundException
 
 
 router = APIRouter(prefix='/activity')
@@ -62,4 +64,10 @@ async def get_product_details_by_slug(
     slug: str,
     service: UserActivityService = Depends(get_user_activity_service),
 ):
-    return await service.get_product_by_slug(slug)
+    try:
+        result  = await service.get_product_by_slug(slug)
+        return result
+    except NotFoundException as e:
+        raise e
+    except Exception as e:
+        raise e

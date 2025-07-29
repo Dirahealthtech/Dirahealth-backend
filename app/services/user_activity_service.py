@@ -4,7 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.types import String
 from typing import List, Optional
 
-from ..models import OrderItem, Product, User, UserActivity
+from ..exceptions import NotFoundException
+from ..models import OrderItem, Product, User, UserActivity, Category
 
 
 class UserActivityService:
@@ -51,10 +52,15 @@ class UserActivityService:
         return result.scalars().all()
 
 
-    async def get_product_by_slug(self, slug: str) -> Optional[Product]:
+    async def get_product_by_slug(self, slug: str) -> Product:
         stmt = select(Product).where(Product.slug == slug, Product.is_active == True)
         result = await self.db.execute(stmt)
-        return result.scalar_one_or_none()
+        product = result.scalar_one_or_none()
+        
+        if product is None:
+            raise NotFoundException("Product not found!")
+        
+        return product
 
 
     async def get_recommended_products(self, product: Product, limit: int = 6) -> List[Product]:

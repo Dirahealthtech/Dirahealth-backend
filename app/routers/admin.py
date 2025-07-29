@@ -201,7 +201,7 @@ async def create_category(
     except Exception as e:
         raise BadRequestException(f"Failed to create category: {str(e)}")
 
-@router.get("/categories", response_model=List[CategoryResponse])
+@router.get("/list-categories", response_model=List[CategoryResponse])
 async def list_categories(
     db: AsyncSession = Depends(get_db),
     skip: int = 0,
@@ -210,7 +210,7 @@ async def list_categories(
     """
     **List All Categories**
     
-    Retrieves a paginated list of all product categories. Accessible by all authenticated users.
+    Retrieves a paginated list of all product categories
     
     **Query Parameters:**
 
@@ -494,7 +494,7 @@ async def create_product(
         raise BadRequestException(f"Failed to create product: {str(e)}")
 
 
-@router.get("/products", response_model=ProductListResponse)
+@router.get("/list-products", response_model=ProductListResponse)
 async def list_products(
     skip: int = 0,
     limit: int = 20,
@@ -504,8 +504,7 @@ async def list_products(
     requires_prescription: Optional[bool] = None,
     sort_by: str = "id",
     sort_order: str = "asc",
-    db: AsyncSession = Depends(get_db),
-    _: dict = admin_only  # Admin check
+    db: AsyncSession = Depends(get_db)
 ):
     """
     **List Products with Advanced Filtering**
@@ -563,11 +562,10 @@ async def list_products(
         }
 
 
-@router.get("/products/{product_id}", response_model=ProductResponse)
+@router.get("/get-products/{product_id}", response_model=ProductResponse)
 async def get_product(
     product_id: int,
-    db: AsyncSession = Depends(get_db),
-    _: dict = admin_only  # Admin check
+    db: AsyncSession = Depends(get_db)
 ):
     """
     **Get Product Details**

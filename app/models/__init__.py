@@ -10,6 +10,7 @@ from .prescription import Prescription
 from .product import Product
 from .purchase_order import PurchaseOrder
 from .purchase_order_item import PurchaseOrderItem
+from .review import Review, ReviewVote
 from .service import Service
 from .supplier import Supplier
 from .user import User
@@ -76,4 +77,6 @@ __all__ = [
     "Refund",
     "UserActivity",
     "FlashSale",
+    "Review",
+    "ReviewVote",
 ]
