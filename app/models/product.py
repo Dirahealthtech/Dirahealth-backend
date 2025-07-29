@@ -39,6 +39,7 @@ class Product(Base, TimeStampMixin):
     order_items = relationship("OrderItem", back_populates="product")
     cart_items = relationship("CartItem", back_populates="product")
     flash_sales = relationship("FlashSale", secondary="flash_sale_products", back_populates="products")
+    homepage_sections = relationship("HomepageSection", secondary="homepage_section_products", back_populates="products")
     reviews = relationship("Review", back_populates="product", cascade="all, delete-orphan")
 
 

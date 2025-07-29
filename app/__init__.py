@@ -29,6 +29,7 @@ from app.routers.cart import router as cart_router
 from app.routers.orders import router as orders_router
 from app.routers.user_activity import router as user_activity_router
 from app.routers.reviews import router as reviews_router
+from app.routers.homepage_sections import router as homepage_sections_router
 
 
 api_version = "v1"
@@ -64,6 +65,7 @@ app.include_router(cart_router, prefix=f'/api/{api_version}/cart', tags=["Cart"]
 app.include_router(orders_router, prefix=f'/api/{api_version}/orders', tags=['Orders'])
 app.include_router(user_activity_router, prefix=f'/api/{api_version}/user', tags=["User Activity"])
 app.include_router(reviews_router, prefix=f'/api/{api_version}/reviews', tags=["Reviews"])
+app.include_router(homepage_sections_router, prefix=f'/api/{api_version}', tags=["Homepage Sections"])
 
 
 # register custom exceptions

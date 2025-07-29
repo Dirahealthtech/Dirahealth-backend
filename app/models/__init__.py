@@ -79,4 +79,5 @@ __all__ = [
     "FlashSale",
     "Review",
     "ReviewVote",
+    "HomePageSection",
 ]

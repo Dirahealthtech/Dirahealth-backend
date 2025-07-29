@@ -40,7 +40,8 @@ class CustomAuthMiddleWare(BaseHTTPMiddleware):
             f"/api/{api_version}/admin/list-categories",
             f"/api/{api_version}/admin/list-products",
             f"/api/{api_version}/admin/get-products",
-            f"/api/{api_version}/reviews/product"
+            f"/api/{api_version}/reviews/product",
+            f"/api/{api_version}/homepage-sections"
         ]
 
 
