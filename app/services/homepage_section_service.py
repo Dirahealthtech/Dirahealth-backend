@@ -63,6 +63,40 @@ class HomepageSectionService:
         
         return [HomepageSectionResponse.model_validate(section) for section in sections]
     
+    async def get_homepage_sections_list(
+        self, 
+        db: AsyncSession,
+        active_only: bool = False
+    ) -> List[HomepageSectionListResponse]:
+        # Get sections with product count
+        query = select(
+            HomepageSection,
+            func.count(homepage_section_products.c.product_id).label('product_count')
+        ).outerjoin(
+            homepage_section_products,
+            HomepageSection.id == homepage_section_products.c.homepage_section_id
+        ).group_by(HomepageSection.id)
+        
+        if active_only:
+            query = query.where(HomepageSection.is_active == True)
+        
+        query = query.order_by(HomepageSection.display_order, HomepageSection.created_at)
+        
+        result = await db.execute(query)
+        sections_data = result.all()
+        
+        return [
+            HomepageSectionListResponse(
+                id=section.id,
+                title=section.title,
+                description=section.description,
+                display_order=section.display_order,
+                is_active=section.is_active,
+                product_count=product_count,
+                created_at=section.created_at
+            ) for section, product_count in sections_data
+        ]
+    
     async def get_homepage_section_by_id(
         self, 
         db: AsyncSession, 

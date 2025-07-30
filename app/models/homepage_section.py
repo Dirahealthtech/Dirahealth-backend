@@ -6,7 +6,7 @@ from ..db.base import Base
 from .base import TimeStampMixin
 
 
-# Many-to-many association table for homepage sections and products
+# Association table for many-to-many relationship between homepage sections and products
 homepage_section_products = Table(
     'homepage_section_products',
     Base.metadata,
@@ -23,9 +23,9 @@ class HomepageSection(Base, TimeStampMixin):
     __tablename__ = "homepage_sections"
 
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(100), nullable=False)
-    description = Column(Text, nullable=True)
-    display_order = Column(Integer, default=0)
+    title = Column(String(100), nullable=False)  # e.g., "Flash Sales", "Black Friday"
+    description = Column(Text, nullable=True)  # Rich HTML description
+    display_order = Column(Integer, default=0)  # Order on homepage
     is_active = Column(Boolean, default=True)
 
     # Relationships

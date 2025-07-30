@@ -90,6 +90,46 @@ async def get_homepage_section(
 
 
 # Admin endpoints for managing homepage sections
+@router.get("/admin/list", response_model=List[HomepageSectionListResponse])
+async def get_homepage_sections_admin(
+    active_only: bool = Query(False, description="Only return active sections"),
+    db: AsyncSession = Depends(get_db),
+    _: dict = admin_only
+):
+    """
+    **List Homepage Sections for Admin**
+    
+    Retrieves a list of homepage sections with product counts for admin management.
+    Only accessible by admin users.
+    
+    **Query Parameters:**
+    
+    - **active_only**: Filter by active sections only (default: false - shows all)
+    
+    **Returns:**
+    
+    - Array of homepage sections with summary information:
+        - **id**: Section ID
+        - **title**: Section title
+        - **description**: Section description
+        - **display_order**: Display order
+        - **is_active**: Active status
+        - **product_count**: Number of associated products
+        - **created_at**: Creation timestamp
+    """
+    try:
+        sections = await homepage_section_service.get_homepage_sections_list(
+            db=db, 
+            active_only=active_only
+        )
+        return sections
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching homepage sections: {str(e)}"
+        )
+
+
 @router.post("/admin/", response_model=HomepageSectionResponse, status_code=status.HTTP_201_CREATED)
 async def create_homepage_section(
     section_data: HomepageSectionCreate,
@@ -135,7 +175,7 @@ async def create_homepage_section(
         )
 
 
-@router.put("/admin/{section_id}", response_model=HomepageSectionResponse)
+@router.patch("/admin/{section_id}", response_model=HomepageSectionResponse)
 async def update_homepage_section(
     section_id: int,
     section_data: HomepageSectionUpdate,
