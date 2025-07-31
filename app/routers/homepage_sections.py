@@ -171,7 +171,7 @@ async def update_homepage_section(
     try:
         section = await homepage_section_service.update_homepage_section(db, section_id, section_data)
         return section
-    except atchtFoundException as e:
+    except NotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
