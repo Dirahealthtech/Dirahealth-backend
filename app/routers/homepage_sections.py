@@ -7,8 +7,7 @@ from app.enums import UserRole
 from app.schemas.homepage_section import (
     HomepageSectionCreate,
     HomepageSectionUpdate,
-    HomepageSectionResponse,
-    HomepageSectionListResponse
+    HomepageSectionResponse
 )
 from app.services.homepage_section_service import homepage_section_service
 from app.exceptions import NotFoundException
@@ -90,7 +89,7 @@ async def get_homepage_section(
 
 
 # Admin endpoints for managing homepage sections
-@router.post("/admin", response_model=HomepageSectionResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/admin/", response_model=HomepageSectionResponse, status_code=status.HTTP_201_CREATED)
 async def create_homepage_section(
     section_data: HomepageSectionCreate,
     db: AsyncSession = Depends(get_db),
@@ -172,7 +171,7 @@ async def update_homepage_section(
     try:
         section = await homepage_section_service.update_homepage_section(db, section_id, section_data)
         return section
-    except NotFoundException as e:
+    except atchtFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)

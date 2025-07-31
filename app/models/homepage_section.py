@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, Table
+from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, Table, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -23,12 +23,12 @@ class HomepageSection(Base, TimeStampMixin):
     __tablename__ = "homepage_sections"
 
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(100), nullable=False)  # e.g., "Flash Sales", "Black Friday"
+    title = Column(String(100), nullable=False)  # Changed from 'name' to 'title' to match schemas
     description = Column(Text, nullable=True)  # Rich HTML description
     display_order = Column(Integer, default=0)  # Order on homepage
     is_active = Column(Boolean, default=True)
 
-    # Relationships
+    # Relationships - Many-to-many with products
     products = relationship("Product", secondary=homepage_section_products, back_populates="homepage_sections")
 
     def __repr__(self):
