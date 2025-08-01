@@ -52,12 +52,19 @@ async def get_top_picks(
 
 
 @router.get('/homepage', response_model=List[ProductResponse])
-async def get_products(service: UserActivityService = Depends(get_user_activity_service)):
+async def get_products(
+    name: Optional[str] = Query(None, description="Filter products by name (partial match)"),
+    service: UserActivityService = Depends(get_user_activity_service)
+):
     """
     Retrieve available products to users. This endpoint returns a list of products sold by suppliers
     via the website.
+    
+    **Query Parameters:**
+    
+    - **name**: Filter products by name (optional, partial match, case-insensitive)
     """
-    return await service.get_products()
+    return await service.get_products(name=name)
 
 @router.get('/product/{slug}', response_model=ProductResponse)
 async def get_product_details_by_slug(
