@@ -1,18 +1,9 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, Table, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from ..db.base import Base
 from .base import TimeStampMixin
-
-
-# Association table for many-to-many relationship between homepage sections and products
-homepage_section_products = Table(
-    'homepage_section_products',
-    Base.metadata,
-    Column('homepage_section_id', Integer, ForeignKey('homepage_sections.id'), primary_key=True),
-    Column('product_id', Integer, ForeignKey('products.id'), primary_key=True)
-)
 
 
 class HomepageSection(Base, TimeStampMixin):
@@ -23,13 +14,20 @@ class HomepageSection(Base, TimeStampMixin):
     __tablename__ = "homepage_sections"
 
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(100), nullable=False)  # Changed from 'name' to 'title' to match schemas
+    name = Column(String(100), nullable=False)  # e.g., "Flash Sales", "Black Friday"
+    slug = Column(String(100), nullable=False, unique=True, index=True)  # URL-friendly version
     description = Column(Text, nullable=True)  # Rich HTML description
+    icon = Column(String(255), nullable=True)  # Icon URL or icon class
+    background_color = Column(String(7), nullable=True)  # Hex color code #FF0000
+    text_color = Column(String(7), nullable=True)  # Hex color code for text
     display_order = Column(Integer, default=0)  # Order on homepage
     is_active = Column(Boolean, default=True)
+    start_date = Column(DateTime, nullable=True)  # When section becomes active
+    end_date = Column(DateTime, nullable=True)  # When section expires
+    max_products = Column(Integer, default=10)  # Maximum products to show
 
-    # Relationships - Many-to-many with products
-    products = relationship("Product", secondary=homepage_section_products, back_populates="homepage_sections")
+    # Relationships
+    products = relationship("Product", back_populates="homepage_section")
 
     def __repr__(self):
-        return f"<HomepageSection(id={self.id}, title='{self.title}', active={self.is_active})>"
+        return f"<HomepageSection(id={self.id}, name='{self.name}', active={self.is_active})>"
