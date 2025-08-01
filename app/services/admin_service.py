@@ -341,14 +341,23 @@ class AdminService:
     
     async def delete_product(self, product_id: int, db: AsyncSession) -> bool:
         """
-        Delete a product
+        Delete a product and all its associations
         Returns True if successful
         """
         try:
             # Check if product exists
             product = await self.get_product_by_id(product_id, db)
             
-            # Delete the product
+            # Import the association table
+            from app.models.homepage_section import homepage_section_products
+            
+            # First, remove all homepage section associations
+            delete_associations_stmt = delete(homepage_section_products).where(
+                homepage_section_products.c.product_id == product_id
+            )
+            await db.execute(delete_associations_stmt)
+            
+            # Delete the product (other relationships should be handled by cascade)
             stmt = (
                 delete(Product)
                 .where(Product.id == product_id)
@@ -392,11 +401,20 @@ class AdminService:
     
     async def batch_delete_products(self, product_ids: List[int], db: AsyncSession) -> int:
         """
-        Delete multiple products
+        Delete multiple products and all their associations
         Returns count of deleted rows
         """
         try:
-            # Delete products
+            # Import the association table
+            from app.models.homepage_section import homepage_section_products
+            
+            # First, remove all homepage section associations for these products
+            delete_associations_stmt = delete(homepage_section_products).where(
+                homepage_section_products.c.product_id.in_(product_ids)
+            )
+            await db.execute(delete_associations_stmt)
+            
+            # Delete products (other relationships should be handled by cascade)
             stmt = (
                 delete(Product)
                 .where(Product.id.in_(product_ids))
