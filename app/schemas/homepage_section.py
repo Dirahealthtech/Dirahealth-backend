@@ -5,6 +5,30 @@ from datetime import datetime
 from .product import ProductResponse
 
 
+# Simplified schemas for public API
+class SimplifiedProductResponse(BaseModel):
+    id: int
+    slug: str
+    name: str
+    price: float
+    discounted_price: Optional[float] = None
+    images: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class SimplifiedHomepageSectionResponse(BaseModel):
+    title: str
+    display_order: int
+    id: int
+    products: List[SimplifiedProductResponse] = []
+
+    class Config:
+        from_attributes = True
+
+
+# Original detailed schemas
 class HomepageSectionBase(BaseModel):
     title: str
     description: Optional[str] = None

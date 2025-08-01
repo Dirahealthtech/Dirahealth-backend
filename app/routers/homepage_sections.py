@@ -8,7 +8,7 @@ from app.schemas.homepage_section import (
     HomepageSectionCreate,
     HomepageSectionUpdate,
     HomepageSectionResponse,
-    HomepageSectionListResponse
+    SimplifiedHomepageSectionResponse
 )
 from app.services.homepage_section_service import homepage_section_service
 from app.exceptions import NotFoundException
@@ -20,7 +20,7 @@ admin_only = Depends(RoleChecker([UserRole.ADMIN]))
 
 
 # Public endpoints for displaying homepage sections
-@router.get("/", response_model=List[HomepageSectionResponse])
+@router.get("/", response_model=List[SimplifiedHomepageSectionResponse])
 async def get_homepage_sections(
     active_only: bool = Query(True, description="Only return active sections"),
     include_products: bool = Query(True, description="Include products in response"),
@@ -42,7 +42,7 @@ async def get_homepage_sections(
     - Sections are ordered by display_order and creation date
     """
     try:
-        sections = await homepage_section_service.get_all_homepage_sections(
+        sections = await homepage_section_service.get_simplified_homepage_sections(
             db=db, 
             active_only=active_only,
             include_products=include_products
