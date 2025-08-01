@@ -43,6 +43,8 @@ class CustomAuthMiddleWare(BaseHTTPMiddleware):
             f"/api/{api_version}/reviews/product",
             f"/api/{api_version}/homepage-sections",
             f"/api/{api_version}/user/activity/homepage",
+            f"/api/{api_version}/user/activity/top-picks",
+            f"/api/{api_version}/user/activity/product"
         ]
 
 
