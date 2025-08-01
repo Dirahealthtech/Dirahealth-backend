@@ -40,18 +40,10 @@ class UserActivityService:
         return rec_query.scalars().all()
 
 
-    async def get_products(self, skip: int = 0, limit: int = 12, name: Optional[str] = None) -> List[Product]:
+    async def get_products(self, skip: int = 0, limit: int = 12) -> List[Product]:
         stmt = (
             select(Product)
             .where(Product.is_active == True)
-        )
-        
-        # Add name filter if provided
-        if name:
-            stmt = stmt.where(Product.name.ilike(f"%{name}%"))
-        
-        stmt = (
-            stmt
             .offset(skip)
             .limit(limit)
             .order_by(desc(Product.created_at))
