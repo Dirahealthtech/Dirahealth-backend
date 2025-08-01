@@ -38,15 +38,12 @@ async def get_top_picks(
     This endpoint returns a list of recommended items or activities for the authenticated user,
     based on their activity history or preferences.
 
-    Args:
-        current_user (User): The currently authenticated user, injected by dependency.
-        service (UserActivityService): The user activity service, injected by dependency.
+    **Args**:
+    - **current_user (User)**: The currently authenticated user, injected by dependency.
+    - **service (UserActivityService)**: The user activity service, injected by dependency.
 
     Returns:
-        List[Any]: A list of top picks or recommendations for the user.
-
-    Raises:
-        HTTPException: If the user is not authenticated or an error occurs during retrieval.
+    - **List[Any]**: A list of top picks or recommendations for the user.
     """
     return await service.get_top_picks(current_user, anonymous_user)
 
@@ -71,6 +68,11 @@ async def get_product_details_by_slug(
     slug: str,
     service: UserActivityService = Depends(get_user_activity_service),
 ):
+    '''
+    This endpoint retrieves products by their slug
+    **Args**:
+    - **slug**: product slug that will be retrieved
+    '''
     try:
         result  = await service.get_product_by_slug(slug)
         return result
