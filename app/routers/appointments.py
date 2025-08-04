@@ -73,7 +73,7 @@ async def get_appointment(
     return await service.get_appointment(appointment_id, current_user)
 
 
-@router.put("/{appointment_id}", dependencies=[customers_only], response_model=AppointmentResponse)
+@router.patch("/{appointment_id}", dependencies=[customers_only], response_model=AppointmentResponse)
 async def update_appointment(
     data: UpdateScheduledAppointment,
     appointment_id: int = Path(..., description="ID of the appointment"),

@@ -65,7 +65,7 @@ async def get_order_tracking(
     """Get tracking information for an order"""
     return await order_service.get_tracking_info(order_id, current_user.id, db)
 
-@router.put("/{order_id}/tracking", response_model=TrackingResponse)
+@router.patch("/{order_id}/tracking", response_model=TrackingResponse)
 async def update_order_tracking(
     order_id: int,
     tracking_data: TrackingUpdate,
@@ -80,7 +80,7 @@ async def update_order_tracking(
         db=db
     )
 
-@router.put("/{order_id}/status")
+@router.patch("/{order_id}/status")
 async def update_order_status(
     order_id: int,
     status_update: OrderStatusUpdate,

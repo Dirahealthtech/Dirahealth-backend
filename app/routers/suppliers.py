@@ -43,7 +43,7 @@ async def add_product_supplier(
     return await service.create_supplier(supplier,  current_user)
 
 
-@router.put('/{id}/update-supplier', dependencies=[admins_only], response_model=SupplierResponse)
+@router.patch('/{id}/update-supplier', dependencies=[admins_only], response_model=SupplierResponse)
 async def update_product_supplier(
     data: UpdateSupplier,
     id: int = Path(..., description="ID of the supplier"),
