@@ -219,10 +219,33 @@ class HomepageSectionUpdate(BaseModel):
 class HomepageSectionResponse(HomepageSectionBase):
     id: int
     is_active: bool
-    slug: str
+    slug: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     products: List[ProductResponse] = []
+
+    @model_validator(mode='before')
+    @classmethod
+    def generate_slug_if_missing(cls, data):
+        """Generate slug from title if slug is None"""
+        if hasattr(data, '__dict__'):
+            # Convert SQLAlchemy object to dict
+            data_dict = {}
+            for key, value in data.__dict__.items():
+                if not key.startswith('_'):
+                    data_dict[key] = value
+            data = data_dict
+        
+        if isinstance(data, dict) and (data.get('slug') is None):
+            title = data.get('title', '')
+            if title:
+                # Generate slug from title
+                import re
+                slug = re.sub(r'[^a-zA-Z0-9\s-]', '', title.lower())
+                slug = re.sub(r'\s+', '-', slug).strip('-')
+                data['slug'] = slug or 'homepage-section'
+        
+        return data
 
     class Config:
         from_attributes = True
