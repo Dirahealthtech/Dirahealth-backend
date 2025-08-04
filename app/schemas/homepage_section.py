@@ -1,8 +1,43 @@
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, model_validator, field_validator
 from typing import List, Optional
 from datetime import datetime
+import bleach
 
 from .product import ProductResponse
+
+
+# Try to import CSS sanitizer if available
+try:
+    from bleach.css_sanitizer import CSSSanitizer
+    CSS_SANITIZER = CSSSanitizer(allowed_css_properties=[
+        # Text styling
+        'color', 'background-color', 'font-size', 'font-weight', 'font-style',
+        'font-family', 'text-align', 'text-decoration', 'text-transform',
+        'line-height', 'letter-spacing', 'word-spacing',
+        
+        # Layout and spacing
+        'margin', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
+        'padding', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
+        'width', 'height', 'max-width', 'max-height', 'min-width', 'min-height',
+        
+        # Border and display
+        'border', 'border-top', 'border-right', 'border-bottom', 'border-left',
+        'border-color', 'border-style', 'border-width', 'border-radius',
+        'display', 'visibility', 'opacity',
+        
+        # Positioning (limited for security)
+        'position', 'top', 'right', 'bottom', 'left', 'z-index',
+        
+        # Flexbox and grid (common in modern layouts)
+        'flex', 'flex-direction', 'flex-wrap', 'justify-content', 'align-items',
+        'align-content', 'align-self', 'flex-grow', 'flex-shrink', 'flex-basis',
+        
+        # Other useful properties
+        'vertical-align', 'white-space', 'overflow', 'overflow-x', 'overflow-y',
+        'cursor', 'list-style', 'list-style-type', 'text-indent'
+    ])
+except ImportError:
+    CSS_SANITIZER = None
 
 
 # Simplified schemas for public API
@@ -60,6 +95,60 @@ class HomepageSectionBase(BaseModel):
     display_order: int = 0
     is_active: bool = True
 
+    @field_validator('description', mode='before')
+    @classmethod
+    def sanitize_html_description(cls, v):
+        """Sanitize HTML description from rich text editor using bleach"""
+        if not v:
+            return v
+        
+        # Define allowed HTML tags for rich text content
+        allowed_tags = [
+            'p', 'br', 'strong', 'b', 'em', 'i', 'u', 'ul', 'ol', 'li',
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'span',
+            'div', 'a', 'img', 'table', 'tr', 'td', 'th', 'thead', 'tbody',
+            'tfoot', 'caption', 'sub', 'sup', 'small', 'mark', 'del', 'ins'
+        ]
+        
+        # Define allowed attributes for specific tags
+        allowed_attributes = {
+            'a': ['href', 'title', 'target', 'style'],
+            'img': ['src', 'alt', 'title', 'width', 'height', 'style'],
+            'p': ['style'],
+            'span': ['style'],
+            'div': ['style'],
+            'h1': ['style'], 'h2': ['style'], 'h3': ['style'], 
+            'h4': ['style'], 'h5': ['style'], 'h6': ['style'],
+            'strong': ['style'], 'b': ['style'], 'em': ['style'], 'i': ['style'], 'u': ['style'],
+            'ul': ['style'], 'ol': ['style'], 'li': ['style'],
+            'blockquote': ['style'],
+            'table': ['style', 'border', 'cellpadding', 'cellspacing'],
+            'tr': ['style'],
+            'td': ['style', 'colspan', 'rowspan'],
+            'th': ['style', 'colspan', 'rowspan'],
+            'thead': ['style'], 'tbody': ['style'], 'tfoot': ['style'],
+            'caption': ['style'],
+            'sub': ['style'], 'sup': ['style'],
+            'small': ['style'], 'mark': ['style'], 'del': ['style'], 'ins': ['style'],
+            '*': ['class']  # Allow class attribute on all tags
+        }
+        
+        # Define allowed protocols for links
+        allowed_protocols = ['http', 'https', 'mailto']
+        
+        # Sanitize the HTML using bleach with enhanced security
+        sanitized = bleach.clean(
+            v,
+            tags=allowed_tags,
+            attributes=allowed_attributes,
+            protocols=allowed_protocols,
+            strip=True,  # Remove disallowed tags entirely
+            strip_comments=True,  # Remove HTML comments
+            css_sanitizer=CSS_SANITIZER  # CSS sanitization if available
+        )
+        
+        return sanitized
+
 
 class HomepageSectionCreate(HomepageSectionBase):
     product_ids: Optional[List[int]] = []
@@ -71,6 +160,60 @@ class HomepageSectionUpdate(BaseModel):
     display_order: Optional[int] = None
     is_active: Optional[bool] = None
     product_ids: Optional[List[int]] = None
+
+    @field_validator('description', mode='before')
+    @classmethod
+    def sanitize_html_description(cls, v):
+        """Sanitize HTML description from rich text editor using bleach"""
+        if not v:
+            return v
+        
+        # Define allowed HTML tags for rich text content
+        allowed_tags = [
+            'p', 'br', 'strong', 'b', 'em', 'i', 'u', 'ul', 'ol', 'li',
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'span',
+            'div', 'a', 'img', 'table', 'tr', 'td', 'th', 'thead', 'tbody',
+            'tfoot', 'caption', 'sub', 'sup', 'small', 'mark', 'del', 'ins'
+        ]
+        
+        # Define allowed attributes for specific tags
+        allowed_attributes = {
+            'a': ['href', 'title', 'target', 'style'],
+            'img': ['src', 'alt', 'title', 'width', 'height', 'style'],
+            'p': ['style'],
+            'span': ['style'],
+            'div': ['style'],
+            'h1': ['style'], 'h2': ['style'], 'h3': ['style'], 
+            'h4': ['style'], 'h5': ['style'], 'h6': ['style'],
+            'strong': ['style'], 'b': ['style'], 'em': ['style'], 'i': ['style'], 'u': ['style'],
+            'ul': ['style'], 'ol': ['style'], 'li': ['style'],
+            'blockquote': ['style'],
+            'table': ['style', 'border', 'cellpadding', 'cellspacing'],
+            'tr': ['style'],
+            'td': ['style', 'colspan', 'rowspan'],
+            'th': ['style', 'colspan', 'rowspan'],
+            'thead': ['style'], 'tbody': ['style'], 'tfoot': ['style'],
+            'caption': ['style'],
+            'sub': ['style'], 'sup': ['style'],
+            'small': ['style'], 'mark': ['style'], 'del': ['style'], 'ins': ['style'],
+            '*': ['class']  # Allow class attribute on all tags
+        }
+        
+        # Define allowed protocols for links
+        allowed_protocols = ['http', 'https', 'mailto']
+        
+        # Sanitize the HTML using bleach with enhanced security
+        sanitized = bleach.clean(
+            v,
+            tags=allowed_tags,
+            attributes=allowed_attributes,
+            protocols=allowed_protocols,
+            strip=True,  # Remove disallowed tags entirely
+            strip_comments=True,  # Remove HTML comments
+            css_sanitizer=CSS_SANITIZER  # CSS sanitization if available
+        )
+        
+        return sanitized
 
 
 class HomepageSectionResponse(HomepageSectionBase):
@@ -93,6 +236,61 @@ class HomepageSectionListResponse(BaseModel):
     is_active: bool
     product_count: int
     created_at: datetime
+
+
+    @field_validator('description', mode='before')
+    @classmethod
+    def sanitize_html_description(cls, v):
+        """Sanitize HTML description from rich text editor using bleach"""
+        if not v:
+            return v
+        
+        # Define allowed HTML tags for rich text content
+        allowed_tags = [
+            'p', 'br', 'strong', 'b', 'em', 'i', 'u', 'ul', 'ol', 'li',
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'span',
+            'div', 'a', 'img', 'table', 'tr', 'td', 'th', 'thead', 'tbody',
+            'tfoot', 'caption', 'sub', 'sup', 'small', 'mark', 'del', 'ins'
+        ]
+        
+        # Define allowed attributes for specific tags
+        allowed_attributes = {
+            'a': ['href', 'title', 'target', 'style'],
+            'img': ['src', 'alt', 'title', 'width', 'height', 'style'],
+            'p': ['style'],
+            'span': ['style'],
+            'div': ['style'],
+            'h1': ['style'], 'h2': ['style'], 'h3': ['style'], 
+            'h4': ['style'], 'h5': ['style'], 'h6': ['style'],
+            'strong': ['style'], 'b': ['style'], 'em': ['style'], 'i': ['style'], 'u': ['style'],
+            'ul': ['style'], 'ol': ['style'], 'li': ['style'],
+            'blockquote': ['style'],
+            'table': ['style', 'border', 'cellpadding', 'cellspacing'],
+            'tr': ['style'],
+            'td': ['style', 'colspan', 'rowspan'],
+            'th': ['style', 'colspan', 'rowspan'],
+            'thead': ['style'], 'tbody': ['style'], 'tfoot': ['style'],
+            'caption': ['style'],
+            'sub': ['style'], 'sup': ['style'],
+            'small': ['style'], 'mark': ['style'], 'del': ['style'], 'ins': ['style'],
+            '*': ['class']  # Allow class attribute on all tags
+        }
+        
+        # Define allowed protocols for links
+        allowed_protocols = ['http', 'https', 'mailto']
+        
+        # Sanitize the HTML using bleach with enhanced security
+        sanitized = bleach.clean(
+            v,
+            tags=allowed_tags,
+            attributes=allowed_attributes,
+            protocols=allowed_protocols,
+            strip=True,  # Remove disallowed tags entirely
+            strip_comments=True,  # Remove HTML comments
+            css_sanitizer=CSS_SANITIZER  # CSS sanitization if available
+        )
+        
+        return sanitized
 
     class Config:
         from_attributes = True
