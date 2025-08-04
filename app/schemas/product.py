@@ -7,9 +7,31 @@ import bleach
 try:
     from bleach.css_sanitizer import CSSSanitizer
     CSS_SANITIZER = CSSSanitizer(allowed_css_properties=[
+        # Text styling
         'color', 'background-color', 'font-size', 'font-weight', 'font-style',
-        'text-align', 'text-decoration', 'margin', 'padding', 'border',
-        'width', 'height'
+        'font-family', 'text-align', 'text-decoration', 'text-transform',
+        'line-height', 'letter-spacing', 'word-spacing',
+        
+        # Layout and spacing
+        'margin', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
+        'padding', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
+        'width', 'height', 'max-width', 'max-height', 'min-width', 'min-height',
+        
+        # Border and display
+        'border', 'border-top', 'border-right', 'border-bottom', 'border-left',
+        'border-color', 'border-style', 'border-width', 'border-radius',
+        'display', 'visibility', 'opacity',
+        
+        # Positioning (limited for security)
+        'position', 'top', 'right', 'bottom', 'left', 'z-index',
+        
+        # Flexbox and grid (common in modern layouts)
+        'flex', 'flex-direction', 'flex-wrap', 'justify-content', 'align-items',
+        'align-content', 'align-self', 'flex-grow', 'flex-shrink', 'flex-basis',
+        
+        # Other useful properties
+        'vertical-align', 'white-space', 'overflow', 'overflow-x', 'overflow-y',
+        'cursor', 'list-style', 'list-style-type', 'text-indent'
     ])
 except ImportError:
     CSS_SANITIZER = None
@@ -75,14 +97,24 @@ class ProductBase(BaseModel):
         
         # Define allowed attributes for specific tags
         allowed_attributes = {
-            'a': ['href', 'title', 'target'],
-            'img': ['src', 'alt', 'title', 'width', 'height'],
+            'a': ['href', 'title', 'target', 'style'],
+            'img': ['src', 'alt', 'title', 'width', 'height', 'style'],
             'p': ['style'],
             'span': ['style'],
             'div': ['style'],
+            'h1': ['style'], 'h2': ['style'], 'h3': ['style'], 
+            'h4': ['style'], 'h5': ['style'], 'h6': ['style'],
+            'strong': ['style'], 'b': ['style'], 'em': ['style'], 'i': ['style'], 'u': ['style'],
+            'ul': ['style'], 'ol': ['style'], 'li': ['style'],
+            'blockquote': ['style'],
             'table': ['style', 'border', 'cellpadding', 'cellspacing'],
+            'tr': ['style'],
             'td': ['style', 'colspan', 'rowspan'],
             'th': ['style', 'colspan', 'rowspan'],
+            'thead': ['style'], 'tbody': ['style'], 'tfoot': ['style'],
+            'caption': ['style'],
+            'sub': ['style'], 'sup': ['style'],
+            'small': ['style'], 'mark': ['style'], 'del': ['style'], 'ins': ['style'],
             '*': ['class']  # Allow class attribute on all tags
         }
         
@@ -142,15 +174,25 @@ class ProductUpdate(BaseModel):
         
         # Define allowed attributes for specific tags
         allowed_attributes = {
-            'a': ['href', 'title', 'target'],
-            'img': ['src', 'alt', 'title', 'width', 'height'],
+            'a': ['href', 'title', 'target', 'style'],
+            'img': ['src', 'alt', 'title', 'width', 'height', 'style'],
             'p': ['style'],
             'span': ['style'],
             'div': ['style'],
+            'h1': ['style'], 'h2': ['style'], 'h3': ['style'], 
+            'h4': ['style'], 'h5': ['style'], 'h6': ['style'],
+            'strong': ['style'], 'b': ['style'], 'em': ['style'], 'i': ['style'], 'u': ['style'],
+            'ul': ['style'], 'ol': ['style'], 'li': ['style'],
+            'blockquote': ['style'],
             'table': ['style', 'border', 'cellpadding', 'cellspacing'],
+            'tr': ['style'],
             'td': ['style', 'colspan', 'rowspan'],
             'th': ['style', 'colspan', 'rowspan'],
-            '*': ['class']  # Allow class attribute on all tags
+            'thead': ['style'], 'tbody': ['style'], 'tfoot': ['style'],
+            'caption': ['style'],
+            'sub': ['style'], 'sup': ['style'],
+            'small': ['style'], 'mark': ['style'], 'del': ['style'], 'ins': ['style'],
+            '*': ['class']
         }
         
         # Define allowed protocols for links
