@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from typing import List, Optional
 from datetime import datetime
 
@@ -14,6 +14,30 @@ class SimplifiedProductResponse(BaseModel):
     discounted_price: Optional[float] = None
     images: Optional[str] = None
 
+    @model_validator(mode='before')
+    @classmethod
+    def extract_pricing_fields(cls, data):
+        """Extract price and discounted_price from nested pricing structure"""
+        if hasattr(data, '__dict__'):
+            data_dict = {}
+            for key, value in data.__dict__.items():
+                if not key.startswith('_'):
+                    data_dict[key] = value
+            data = data_dict
+        
+        if isinstance(data, dict):
+            # If pricing is nested, extract it
+            if 'pricing' in data and isinstance(data['pricing'], dict):
+                data['price'] = data['pricing'].get('price', 0.0)
+                data['discounted_price'] = data['pricing'].get('discounted_price', 0.0)
+            elif hasattr(data.get('pricing'), 'price'):
+                # Handle case where pricing is a Pydantic object
+                pricing = data['pricing']
+                data['price'] = pricing.price
+                data['discounted_price'] = pricing.discounted_price
+        
+        return data
+
     class Config:
         from_attributes = True
 
@@ -21,6 +45,7 @@ class SimplifiedProductResponse(BaseModel):
 class SimplifiedHomepageSectionResponse(BaseModel):
     title: str
     display_order: int
+    is_active: bool
     id: int
     products: List[SimplifiedProductResponse] = []
 
@@ -50,6 +75,8 @@ class HomepageSectionUpdate(BaseModel):
 
 class HomepageSectionResponse(HomepageSectionBase):
     id: int
+    is_active: bool
+    slug: str
     created_at: datetime
     updated_at: datetime
     products: List[ProductResponse] = []

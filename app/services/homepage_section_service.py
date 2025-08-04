@@ -3,28 +3,67 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy import select, func, delete
 from typing import List, Optional
 
+
 from app.models.homepage_section import HomepageSection, homepage_section_products
 from app.models.product import Product
 from app.schemas.homepage_section import (
     HomepageSectionCreate, 
     HomepageSectionUpdate, 
     HomepageSectionResponse,
-    HomepageSectionListResponse,
-    SimplifiedHomepageSectionResponse
+    HomepageSectionListResponse
 )
 from app.exceptions import NotFoundException
 
 
 class HomepageSectionService:
     
+    async def generate_unique_slug(self, title: str, section_id: Optional[int], db: AsyncSession) -> str:
+        """
+        Generate a unique slug from a homepage section title
+        """
+        # Create base slug
+        slug = title.lower().replace(" ", "-").replace("'", "").replace('"', '')
+        # Remove special characters and make URL-friendly
+        import re
+        slug = re.sub(r'[^a-z0-9\-]', '', slug)
+        slug = re.sub(r'-+', '-', slug)  # Replace multiple dashes with single dash
+        slug = slug.strip('-')  # Remove leading/trailing dashes
+        
+        # Check if slug already exists
+        base_slug = slug
+        counter = 1
+        
+        while True:
+            query = select(HomepageSection).where(HomepageSection.slug == slug)
+            
+            # If updating existing section, exclude current section from check
+            if section_id is not None:
+                query = query.where(HomepageSection.id != section_id)
+            
+            result = await db.execute(query)
+            existing = result.scalars().first()
+            
+            if not existing:
+                break
+                
+            # Add counter suffix to make slug unique
+            counter += 1
+            slug = f"{base_slug}-{counter}"
+
+        return slug
+    
     async def create_homepage_section(
         self, 
         db: AsyncSession, 
         section_data: HomepageSectionCreate
     ) -> HomepageSectionResponse:
+        # Generate unique slug
+        slug = await self.generate_unique_slug(section_data.title, None, db)
+        
         # Create section
         section = HomepageSection(
             title=section_data.title,
+            slug=slug,
             description=section_data.description,
             display_order=section_data.display_order,
             is_active=section_data.is_active
@@ -46,7 +85,7 @@ class HomepageSectionService:
     async def get_all_homepage_sections(
         self, 
         db: AsyncSession,
-        active_only: bool = False,
+        active_only: bool = True,
         include_products: bool = False
     ) -> List[HomepageSectionResponse]:
         query = select(HomepageSection)
@@ -63,27 +102,6 @@ class HomepageSectionService:
         sections = result.scalars().all()
         
         return [HomepageSectionResponse.model_validate(section) for section in sections]
-    
-    async def get_simplified_homepage_sections(
-        self, 
-        db: AsyncSession,
-        active_only: bool = False,
-        include_products: bool = False
-    ) -> List[SimplifiedHomepageSectionResponse]:
-        query = select(HomepageSection)
-        
-        if active_only:
-            query = query.where(HomepageSection.is_active == True)
-        
-        if include_products:
-            query = query.options(selectinload(HomepageSection.products))
-        
-        query = query.order_by(HomepageSection.display_order, HomepageSection.created_at)
-        
-        result = await db.execute(query)
-        sections = result.scalars().all()
-        
-        return [SimplifiedHomepageSectionResponse.model_validate(section) for section in sections]
     
     async def get_homepage_sections_list(
         self, 
@@ -153,6 +171,11 @@ class HomepageSectionService:
         # Update fields
         update_data = section_data.model_dump(exclude_unset=True)
         product_ids = update_data.pop('product_ids', None)
+        
+        # Generate new slug if title is updated
+        if 'title' in update_data and update_data['title']:
+            new_slug = await self.generate_unique_slug(update_data['title'], section_id, db)
+            update_data['slug'] = new_slug
         
         for field, value in update_data.items():
             setattr(section, field, value)
