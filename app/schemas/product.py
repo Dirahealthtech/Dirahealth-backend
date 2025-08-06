@@ -48,6 +48,17 @@ class InventorySchema(BaseModel):
     reorder_level: Optional[int] = None
     requires_prescription: bool = False
     is_active: bool = True
+    supports_online_payment: bool = True
+    supports_cod: bool = True
+
+class InventoryUpdateSchema(BaseModel):
+    sku: Optional[str] = None
+    stock: Optional[int] = None
+    reorder_level: Optional[int] = None
+    requires_prescription: Optional[bool] = None
+    is_active: Optional[bool] = None
+    supports_online_payment: Optional[bool] = None
+    supports_cod: Optional[bool] = None
 
 class DimensionsSchema(BaseModel):
     length: Optional[float] = None
@@ -143,7 +154,7 @@ class ProductUpdate(BaseModel):
     category_id: Optional[int] = None
     supplier_id: Optional[int] = None
     pricing: Optional[PricingSchema] = None
-    inventory: Optional[InventorySchema] = None
+    inventory: Optional[InventoryUpdateSchema] = None
     images: Optional[str] = None
     shipping: Optional[ShippingSchema] = None
     warranty: Optional[WarrantySchema] = None
@@ -260,7 +271,9 @@ class ProductResponse(BaseModel):
             'stock': data.get('stock', 0),
             'reorder_level': data.get('reorder_level'),
             'requires_prescription': data.get('requires_prescription', False),
-            'is_active': data.get('is_active', True)
+            'is_active': data.get('is_active', True),
+            'supports_online_payment': data.get('supports_online_payment', True),
+            'supports_cod': data.get('supports_cod', True)
         }
         
         # Map shipping fields if they exist

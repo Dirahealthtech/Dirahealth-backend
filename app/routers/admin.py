@@ -16,6 +16,7 @@ from ..schemas.product import (
     ProductListResponse,
     PricingSchema,
     InventorySchema,
+    InventoryUpdateSchema,
     ShippingSchema,
     WarrantySchema,
     MetadataSchema,
@@ -383,6 +384,8 @@ async def create_product(
     reorder_level: Optional[int] = Form(None),
     requires_prescription: bool = Form(False),
     is_active: bool = Form(True),
+    supports_online_payment: bool = Form(True),
+    supports_cod: bool = Form(True),
     
     # Shipping
     weight: Optional[float] = Form(None),
@@ -426,6 +429,8 @@ async def create_product(
     - **reorder_level**: Minimum stock for reorder alerts (optional)
     - **requires_prescription**: Prescription requirement (optional, default: false)
     - **is_active**: Product availability status (optional, default: true)
+    - **supports_online_payment**: Accepts online payments (optional, default: true)
+    - **supports_cod**: Accepts cash on delivery (optional, default: true)
     
     ### Shipping Information:**
     - **weight**: Product weight (optional)
@@ -490,7 +495,9 @@ async def create_product(
             stock=stock,
             reorder_level=reorder_level,
             requires_prescription=requires_prescription,
-            is_active=is_active
+            is_active=is_active,
+            supports_online_payment=supports_online_payment,
+            supports_cod=supports_cod
         )
         
         shipping = None
@@ -524,12 +531,15 @@ async def create_product(
                 specifications=specifications_dict
             )
         
+        # Handle supplier_id: convert 0 to None for no supplier
+        processed_supplier_id = None if supplier_id == 0 else supplier_id
+        
         # Create product data with structured format
         product_data = ProductCreate(
             name=name,
             description=description,  # Will be sanitized by validator
             category_id=category_id,
-            supplier_id=supplier_id,
+            supplier_id=processed_supplier_id,
             pricing=pricing,
             inventory=inventory,
             images=",".join(image_paths) if image_paths else None,
@@ -660,6 +670,8 @@ async def update_product(
     reorder_level: Optional[str] = Form(None),
     requires_prescription: Optional[str] = Form(None),
     is_active: Optional[str] = Form(None),
+    supports_online_payment: Optional[str] = Form(None),
+    supports_cod: Optional[str] = Form(None),
     
     # Shipping fields
     weight: Optional[str] = Form(None),
@@ -738,7 +750,8 @@ async def update_product(
         if category_id is not None:
             form_data["category_id"] = category_id
         if supplier_id is not None:
-            form_data["supplier_id"] = supplier_id
+            # Convert 0 to None for no supplier
+            form_data["supplier_id"] = None if supplier_id == 0 else supplier_id
         
         # Handle images
         if images:
@@ -771,6 +784,10 @@ async def update_product(
             inventory_data["requires_prescription"] = requires_prescription.lower() == "true"
         if is_active is not None and is_active.strip():
             inventory_data["is_active"] = is_active.lower() == "true"
+        if supports_online_payment is not None and supports_online_payment.strip():
+            inventory_data["supports_online_payment"] = supports_online_payment.lower() == "true"
+        if supports_cod is not None and supports_cod.strip():
+            inventory_data["supports_cod"] = supports_cod.lower() == "true"
         
         shipping_data = {}
         if weight is not None and weight.strip():
