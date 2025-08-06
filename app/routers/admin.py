@@ -22,9 +22,11 @@ from ..schemas.product import (
     DimensionsSchema
 )
 from ..schemas import CreateAdminUser
+from ..schemas.dashboard import DashboardResponse
 from ..services.admin_service import AdminService
 from ..services import AuthService
 from ..services.file_service import FileService
+from ..services.dashboard_service import dashboard_service
 from ..exceptions import NotFoundException, BadRequestException, ConflictException
 from ..schemas.category import CategoryCreate, CategoryResponse, CategoryUpdate
 
@@ -34,6 +36,59 @@ admin_only = Depends(RoleChecker([UserRole.ADMIN]))
 admin_service = AdminService()
 auth_service = AuthService()
 file_service = FileService()
+
+
+@router.get("/dashboard", response_model=DashboardResponse)
+async def get_dashboard_data(
+    db: AsyncSession = Depends(get_db),
+    _: dict = admin_only
+):
+    """
+    **Get Dashboard Data - Admin Only**
+    
+    Retrieve comprehensive dashboard statistics and metrics including:
+    
+    **Summary Statistics:**
+    - Total users, products, categories, orders
+    - Total sales revenue and conversion rates
+    - Active users and key performance indicators
+    
+    **Sales Analytics:**
+    - Revenue breakdown by time periods (today, week, month, year)
+    - Order counts and average order values
+    - Top selling products by units and revenue
+    
+    **Product Management:**
+    - Product counts by status (active, inactive, out of stock)
+    - Low stock alerts and inventory warnings
+    - Category performance and product distribution
+    
+    **User Analytics:**
+    - User registration trends and growth metrics
+    - Top buyers by spending and order frequency
+    - User engagement and verification statistics
+    
+    **Order Management:**
+    - Order status distribution and fulfillment metrics
+    - Latest orders and transaction summaries
+    - Revenue tracking and payment analytics
+    
+    **System Alerts:**
+    - Inventory warnings (low stock, out of stock)
+    - Pending orders and review management
+    - Failed payments and system notifications
+    
+    **Returns:** Complete dashboard data optimized for admin oversight
+    """
+    try:
+        dashboard_data = await dashboard_service.get_dashboard_data(db)
+        return dashboard_data
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve dashboard data: {str(e)}"
+        )
 
 
 # Setting up initial admin user
