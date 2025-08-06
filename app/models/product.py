@@ -24,6 +24,8 @@ class Product(Base, TimeStampMixin):
     specifications = Column(JSON)  # Stores specifications as key-value pairs
     requires_prescription = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
+    supports_online_payment = Column(Boolean, default=True)  # Supports online payment
+    supports_cod = Column(Boolean, default=True)  # Supports cash on delivery
     weight = Column(Float, nullable=True)
     dimensions = Column(JSON, nullable=True)  # Stores length, width, height and unit
     tags = Column(JSON, nullable=True)  # Stores array of tag strings
