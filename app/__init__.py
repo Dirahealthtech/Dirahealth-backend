@@ -31,6 +31,7 @@ from app.routers.user_activity import router as user_activity_router
 from app.routers.reviews import router as reviews_router
 from app.routers.homepage_sections import router as homepage_sections_router
 from app.routers.user_management import router as user_management_router
+from app.routers.mpesa import router as mpesa_router
 
 
 api_version = "v1"
@@ -68,6 +69,7 @@ app.include_router(user_activity_router, prefix=f'/api/{api_version}/user', tags
 app.include_router(reviews_router, prefix=f'/api/{api_version}/reviews', tags=["Reviews"])
 app.include_router(homepage_sections_router, prefix=f'/api/{api_version}', tags=["Homepage Sections"])
 app.include_router(user_management_router, prefix=f'/api/{api_version}', tags=["User Management"])
+app.include_router(mpesa_router, prefix=f'/api/{api_version}', tags=["M-Pesa Payments"])
 
 
 # register custom exceptions

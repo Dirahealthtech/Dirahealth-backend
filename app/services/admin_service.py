@@ -101,6 +101,8 @@ class AdminService:
                 reorder_level=inventory.reorder_level,
                 requires_prescription=inventory.requires_prescription,
                 is_active=inventory.is_active,
+                supports_online_payment=inventory.supports_online_payment,
+                supports_cod=inventory.supports_cod,
                 
                 # Images
                 images=product_data.images,
@@ -288,6 +290,10 @@ class AdminService:
                     update_data["requires_prescription"] = product_data.inventory.requires_prescription
                 if product_data.inventory.is_active is not None:
                     update_data["is_active"] = product_data.inventory.is_active
+                if product_data.inventory.supports_online_payment is not None:
+                    update_data["supports_online_payment"] = product_data.inventory.supports_online_payment
+                if product_data.inventory.supports_cod is not None:
+                    update_data["supports_cod"] = product_data.inventory.supports_cod
             
             # Shipping data
             if product_data.shipping:

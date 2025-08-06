@@ -35,6 +35,7 @@ from .payment_transaction import PaymentTransaction
 from .refund import Refund
 from .user_activity import UserActivity
 from .flash_sales import FlashSale
+from .mpesa_transaction import MpesaTransaction, MpesaConfiguration, MpesaCallback
 
 
 __all__ = [
@@ -80,5 +81,8 @@ __all__ = [
     "Review",
     "ReviewVote",
     "HomePageSection",
+    "MpesaTransaction",
+    "MpesaConfiguration", 
+    "MpesaCallback",
     
 ]

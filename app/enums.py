@@ -102,3 +102,25 @@ class ActivityType(str, enum.Enum):
     VIEW = "view"
     PURCHASE = "purchase"
     SEARCH = "search"
+
+
+class MpesaTransactionType(str, enum.Enum):
+    C2B = "c2b"  # Customer to Business (STK Push)
+    B2C = "b2c"  # Business to Customer (Payout)
+    B2B = "b2b"  # Business to Business
+    REVERSAL = "reversal"  # Transaction reversal
+
+
+class MpesaTransactionStatus(str, enum.Enum):
+    PENDING = "pending"
+    SUCCESS = "success"
+    FAILED = "failed"
+    TIMEOUT = "timeout"
+    CANCELLED = "cancelled"
+
+
+class PaymentMethod(str, enum.Enum):
+    MPESA = "mpesa"
+    CARD = "card"
+    BANK_TRANSFER = "bank_transfer"
+    CASH_ON_DELIVERY = "cash_on_delivery"

@@ -46,6 +46,7 @@ class Order(Base, TimeStampMixin):
     transactions = relationship("PaymentTransaction", back_populates="order", cascade="all, delete-orphan")
     cancellation = relationship("OrderCancellation", back_populates="order", uselist=False, cascade="all, delete-orphan")
     refunds = relationship("Refund", back_populates="order", cascade="all, delete-orphan")
+    mpesa_transactions = relationship("MpesaTransaction", back_populates="order", cascade="all, delete-orphan")
 
 
     def __repr__(self):
