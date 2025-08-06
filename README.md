@@ -54,19 +54,19 @@ pip install -r requirements.txt
 Create a `.env` file at the root level and include the following:
 
 ```env
-DATABASE_URL=sqlite+aiosqlite:///./db.sqlite3
-SECRET_KEY=dev-secret-key-change-in-production-12345678901234567890
+DATABASE_URL=sqlite+aiosqlite:///./db.sqlite3   # development db
+SECRET_KEY=<your-secret_key>
 JWT_ALGORITHM=HS256
-JWT_SECRET=dev-jwt-secret-change-in-production-abcdefghijklmnopqrstuvwxyz
-ACCESS_TOKEN_EXPIRY=604800
-REFRESH_TOKEN_EXPIRY=90
-JTI_EXPIRY=604800
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_PASSWORD=
-MAIL_USERNAME=your-email@gmail.com
-MAIL_PASSWORD=your-app-password
-MAIL_FROM=your-email@gmail.com
+JWT_SECRET=<your-jwt-secret>
+ACCESS_TOKEN_EXPIRY=3600
+REFRESH_TOKEN_EXPIRY=1
+JTI_EXPIRY=3600
+REDIS_HOST=<your-redis-host>    # if you're using redis cloud
+REDIS_PORT=<your-redis-port>    # if you are using redis locally
+REDIS_PASSWORD=<your-redis-password>    # if you are using redis locally
+MAIL_USERNAME=<mail-username>
+MAIL_PASSWORD=<16-digit-app-password>
+MAIL_FROM=<your-email-address>
 MAIL_PORT=587
 MAIL_SERVER=smtp.gmail.com
 MAIL_FROM_NAME=Dira Healthcare
@@ -75,6 +75,15 @@ MAIL_SSL_TLS=False
 USE_CREDENTIALS=True
 VALIDATE_CERTS=True
 DOMAIN=http://127.0.0.1:8000
+
+# M-Pesa Configuration
+MPESA_ENVIRONMENT=sandbox
+MPESA_CONSUMER_KEY=your_consumer_key_from_daraja
+MPESA_CONSUMER_SECRET=your_consumer_secret_from_daraja
+MPESA_BUSINESS_SHORT_CODE=174379
+MPESA_PASSKEY=bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919
+MPESA_CALLBACK_URL=https://your-domain.com/api/v1/payments/mpesa/callback
+MPESA_BUSINESS_NAME=Dira Healthcare
 ```
 
 **Token Expiry Configuration:**
@@ -94,7 +103,115 @@ python -c "import secrets; print(secrets.token_urlsafe(32))"    # SECRET_KEY
 python -c "import secrets; print(secrets.token_urlsafe(64))"    # JWT_SECRET
 ```
 
-### 🔐 4.4 Authentication Token Configuration
+---
+
+### 🔑 4.3 Generate SECRET_KEY and JWT_SECRET
+
+Run this Python command in your terminal to generate secure keys:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))"    # SECRET_KEY
+
+python -c "import secrets; print(secrets.token_urlsafe(64))"    # JWT_SECRET
+```
+
+### 💳 4.4 M-Pesa Payment Integration Setup
+
+The platform supports M-Pesa payments through Safaricom's Daraja API. Follow these steps to configure M-Pesa:
+
+#### 4.4.1 Create Daraja Developer Account
+
+1. Visit [Safaricom Daraja Portal](https://developer.safaricom.co.ke/)
+2. Register a developer account
+3. Login and create a new app
+4. Select **"Lipa Na M-Pesa Sandbox"** API product
+5. Get your **Consumer Key** and **Consumer Secret**
+
+#### 4.4.2 M-Pesa Environment Variables
+
+Add these M-Pesa configuration variables to your `.env` file:
+
+```env
+# M-Pesa Configuration (Sandbox for testing)
+MPESA_ENVIRONMENT=sandbox
+MPESA_CONSUMER_KEY=your_consumer_key_from_daraja
+MPESA_CONSUMER_SECRET=your_consumer_secret_from_daraja
+MPESA_BUSINESS_SHORT_CODE=174379
+MPESA_PASSKEY=bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919
+MPESA_CALLBACK_URL=https://your-domain.com/api/v1/payments/mpesa/callback
+MPESA_BUSINESS_NAME=Dira Healthcare
+```
+
+**M-Pesa Configuration Explained:**
+
+| Variable | Description | Sandbox Value | Production Value |
+|----------|-------------|---------------|------------------|
+| `MPESA_ENVIRONMENT` | API environment | `sandbox` | `production` |
+| `MPESA_CONSUMER_KEY` | From Daraja app | Your app key | Your app key |
+| `MPESA_CONSUMER_SECRET` | From Daraja app | Your app secret | Your app secret |
+| `MPESA_BUSINESS_SHORT_CODE` | Paybill/Till number | `174379` | Your actual shortcode |
+| `MPESA_PASSKEY` | STK Push passkey | Provided sandbox key | Your production key |
+| `MPESA_CALLBACK_URL` | Webhook endpoint | Test URL | Your production URL |
+| `MPESA_BUSINESS_NAME` | Business display name | Your business name | Your business name |
+
+#### 4.4.3 Testing M-Pesa Integration
+
+**Sandbox Testing:**
+- Use test phone numbers: `254708374149` or `254711766949`
+- Test amounts: Any value between 1-70000 KES
+- No real money is processed
+
+**Test STK Push Request:**
+```json
+{
+  "phone_number": "254708374149",
+  "amount": 10,
+  "account_reference": "TEST001",
+  "transaction_desc": "Test payment"
+}
+```
+
+#### 4.4.4 Production Setup
+
+⚠️ **Before switching to production:**
+
+1. **Get Production Credentials:**
+   - Apply for production access in Daraja portal
+   - Get your actual business short code (paybill/till number)
+   - Get production passkey from Safaricom
+
+2. **Update Environment Variables:**
+   ```env
+   MPESA_ENVIRONMENT=production
+   MPESA_BUSINESS_SHORT_CODE=your_actual_shortcode
+   MPESA_PASSKEY=your_production_passkey
+   MPESA_CALLBACK_URL=https://your-production-domain.com/api/v1/payments/mpesa/callback
+   ```
+
+3. **Deploy with Public Callback URL:**
+   - Deploy your application to a public server
+   - Ensure callback URL is accessible by Safaricom servers
+   - Use HTTPS for production callback URLs
+
+4. **Test with Small Amounts First:**
+   - Start with small amounts (1-10 KES)
+   - Verify callbacks are received
+   - Test with real phone numbers
+
+#### 4.4.5 M-Pesa API Endpoints
+
+Once configured, these endpoints will be available:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/payments/mpesa/stk-push` | POST | Initiate STK Push payment |
+| `/api/v1/payments/mpesa/order-payment` | POST | Pay for specific order |
+| `/api/v1/payments/mpesa/status/{checkout_request_id}` | GET | Check payment status |
+| `/api/v1/payments/mpesa/transactions/{transaction_id}` | GET | Get transaction details |
+| `/api/v1/payments/mpesa/callback` | POST | M-Pesa callback endpoint |
+| `/api/v1/payments/mpesa/config` | POST | Configure M-Pesa (Admin only) |
+
+### 🔐 4.5 Authentication Token Configuration
 
 The API uses JWT-based authentication with the following token lifespans:
 
@@ -118,7 +235,7 @@ To modify token lifespans, update these values in your `.env` file:
 
 ---
 
-### 4.5 Running Database Migrations 🚀
+### 4.6 Running Database Migrations 🚀
 Initialize Alembic (if not already initialized):
 ```bash
 alembic init migrations
@@ -129,7 +246,7 @@ alembic revision --autogenerate -m "initial migration"
 alembic upgrade head
 ```
 
-### 📦 4.6 Run the API
+### 📦 4.7 Run the API
 
 ```bash
 uvicorn app:app --reload
@@ -137,14 +254,14 @@ uvicorn app:app --reload
 
 This will start the server at [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
-## 4.7 API docs - Swagger, redoc
+## 4.8 API docs - Swagger, redoc
 Once the backend server is running, access the API documentation at:
 - **Swagger UI**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/api/v1/docs)
 - **Redoc**: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/api/v1/redoc)
 
 ---
 
-### 🧠 4.8 Setting Up Redis (Online Version)
+### 🧠 4.9 Setting Up Redis (Online Version)
 
 1. Sign up at a Redis hosting provider like [Redis Cloud](https://cloud.redis.io).
 2. Create a new Redis database and copy the **connection URL** (format: `redis://default:<password>@<host>:<port>`).
@@ -152,7 +269,7 @@ Once the backend server is running, access the API documentation at:
 
 ---
 
-### 📧 4.9 Gmail App Password Setup
+### 📧 4.10 Gmail App Password Setup
 
 To send emails securely using Gmail:
 
@@ -170,6 +287,121 @@ To send emails securely using Gmail:
    ![Screenshot from 2025-05-30 22-31-23](https://github.com/user-attachments/assets/e8ff4acc-c4ef-414f-9256-7f5b140a6dde)
 
 6. You'll recieve an email notification for the generated app password.
+
+---
+
+### 🔄 4.11 Environment Switching Guide
+
+#### Sandbox to Production Migration
+
+When moving from development/testing to production:
+
+1. **Update Environment Variables:**
+   ```bash
+   # Change in .env file
+   MPESA_ENVIRONMENT=production
+   MPESA_BUSINESS_SHORT_CODE=your_production_shortcode
+   MPESA_PASSKEY=your_production_passkey
+   MPESA_CALLBACK_URL=https://your-domain.com/api/v1/payments/mpesa/callback
+   
+   # Database (if moving to production database)
+   DATABASE_URL=postgresql+asyncpg://user:password@production-host:5432/production_db
+   
+   # Security Keys (generate new ones for production)
+   SECRET_KEY=your_production_secret_key
+   JWT_SECRET=your_production_jwt_secret
+   
+   # Email (use production email credentials)
+   MAIL_USERNAME=your-production-email@company.com
+   MAIL_PASSWORD=your-production-app-password
+   ```
+
+2. **Update M-Pesa Configuration via API:**
+   ```bash
+   # Call admin endpoint to update M-Pesa config
+   POST /api/v1/payments/mpesa/config
+   ```
+
+3. **Deploy Application:**
+   - Deploy to production server (AWS, Google Cloud, Heroku, etc.)
+   - Ensure callback URL is publicly accessible
+   - Use HTTPS for all production URLs
+
+#### Production Checklist
+
+- [ ] Production Daraja credentials obtained
+- [ ] Actual business shortcode and passkey configured
+- [ ] Public callback URL accessible via HTTPS
+- [ ] Production database configured
+- [ ] New security keys generated
+- [ ] Production email credentials set up
+- [ ] SSL/TLS certificates configured
+- [ ] Environment variables secured (not in version control)
+
+### 🐛 4.12 Troubleshooting M-Pesa Integration
+
+#### Common Issues and Solutions
+
+**1. "Invalid CallBackURL" Error**
+```
+Error: Bad Request - Invalid CallBackURL
+```
+- **Cause**: Callback URL is not publicly accessible
+- **Solution**: Use ngrok for local testing or deploy to public server
+- **Sandbox**: Use dummy URL like `https://mydomain.com/callback` for testing
+
+**2. OAuth Token Errors**
+```
+Error: Failed to get access token
+```
+- **Cause**: Invalid consumer key/secret
+- **Solution**: Verify credentials from Daraja portal
+- **Check**: Ensure no extra spaces in environment variables
+
+**3. STK Push Not Received**
+```
+Success response but no STK push on phone
+```
+- **Sandbox**: Normal behavior, use test phone numbers
+- **Production**: Verify phone number format (254XXXXXXXXX)
+- **Check**: Ensure phone number is Safaricom/M-Pesa enabled
+
+**4. Transaction Status Always "Failed"**
+```
+All transactions show as failed/cancelled
+```
+- **Sandbox**: Expected behavior, simulates various outcomes
+- **Production**: Check actual transaction flow and callback processing
+
+**5. Database Connection Errors**
+```
+Error: connection to database failed
+```
+- **Check**: DATABASE_URL format and credentials
+- **Verify**: Database server is running
+- **Ensure**: Database user has required permissions
+
+#### Testing Commands
+
+**Test OAuth Token:**
+```bash
+curl -X GET "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials" \
+-H "Authorization: Basic base64(consumer_key:consumer_secret)"
+```
+
+**Test STK Push:**
+```bash
+# Use API documentation at /docs for interactive testing
+# Or test via Postman with proper authentication
+```
+
+**Check Database Connection:**
+```python
+# Run in Python shell
+import asyncpg
+conn = await asyncpg.connect("your_database_url")
+print("Database connected successfully!")
+```
 
 ---
 
