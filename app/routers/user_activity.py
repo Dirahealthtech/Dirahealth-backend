@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from ..core.dependencies import get_anonymous_user, get_db
 from ..models import User
-from ..schemas.product import ProductResponse
+from ..schemas.product import ProductResponse, SimpleProductResponse
 from ..schemas.category import CategoryResponse
 from ..services.user_activity_service import UserActivityService
 from ..exceptions import NotFoundException
@@ -48,7 +48,7 @@ async def get_top_picks(
     return await service.get_top_picks(current_user, anonymous_user)
 
 
-@router.get('/homepage', response_model=List[ProductResponse])
+@router.get('/homepage', response_model=List[SimpleProductResponse])
 async def get_products(
     name: Optional[str] = Query(None, description="Filter products by name (partial match)"),
     service: UserActivityService = Depends(get_user_activity_service)

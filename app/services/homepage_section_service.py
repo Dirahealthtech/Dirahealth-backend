@@ -10,7 +10,8 @@ from app.schemas.homepage_section import (
     HomepageSectionCreate, 
     HomepageSectionUpdate, 
     HomepageSectionResponse,
-    HomepageSectionListResponse
+    HomepageSectionListResponse,
+    SimplifiedHomepageSectionResponse
 )
 from app.exceptions import NotFoundException
 
@@ -102,6 +103,30 @@ class HomepageSectionService:
         sections = result.scalars().all()
         
         return [HomepageSectionResponse.model_validate(section) for section in sections]
+    
+    async def get_all_homepage_sections_simplified(
+        self, 
+        db: AsyncSession,
+        active_only: bool = True,
+        include_products: bool = False
+    ) -> List[SimplifiedHomepageSectionResponse]:
+        """
+        Get all homepage sections for public display with simplified product information
+        """
+        query = select(HomepageSection)
+        
+        if active_only:
+            query = query.where(HomepageSection.is_active == True)
+        
+        if include_products:
+            query = query.options(selectinload(HomepageSection.products))
+        
+        query = query.order_by(HomepageSection.display_order, HomepageSection.created_at)
+        
+        result = await db.execute(query)
+        sections = result.scalars().all()
+        
+        return [SimplifiedHomepageSectionResponse.model_validate(section) for section in sections]
     
     async def get_homepage_sections_list(
         self, 

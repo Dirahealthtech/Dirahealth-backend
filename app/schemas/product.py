@@ -79,6 +79,46 @@ class MetadataSchema(BaseModel):
     tags: Optional[List[str]] = None
     specifications: Optional[Dict[str, Any]] = None
 
+# Simplified schema for homepage/activity endpoints
+class SimpleProductResponse(BaseModel):
+    id: int
+    slug: str
+    name: str
+    category_id: int
+    pricing: PricingSchema
+    images: Optional[str] = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def map_flat_to_nested(cls, data):
+        """Map flat database fields to nested schema structure"""
+        # Handle None data
+        if data is None:
+            raise ValueError("Product data cannot be None")
+        
+        # Convert SQLAlchemy model to dict if needed
+        if hasattr(data, '__dict__'):
+            data_dict = {}
+            for key, value in data.__dict__.items():
+                if not key.startswith('_'):
+                    data_dict[key] = value
+            data = data_dict
+        
+        # Ensure data is a dictionary
+        if not isinstance(data, dict):
+            raise ValueError(f"Expected dict or SQLAlchemy model, got {type(data)}")
+        
+        # Map pricing fields
+        data['pricing'] = {
+            'price': data.get('price', 0.0),
+            'discounted_price': data.get('discounted_price', 0.0)
+        }
+        
+        return data
+
+    class Config:
+        from_attributes = True
+
 class ProductBase(BaseModel):
     name: str
     description: str  # Rich HTML content from TinyMCE/WYSIWYG
@@ -272,8 +312,8 @@ class ProductResponse(BaseModel):
             'reorder_level': data.get('reorder_level'),
             'requires_prescription': data.get('requires_prescription', False),
             'is_active': data.get('is_active', True),
-            'supports_online_payment': data.get('supports_online_payment', True),
-            'supports_cod': data.get('supports_cod', True)
+            'supports_online_payment': data.get('supports_online_payment') if data.get('supports_online_payment') is not None else True,
+            'supports_cod': data.get('supports_cod') if data.get('supports_cod') is not None else True
         }
         
         # Map shipping fields if they exist

@@ -42,7 +42,7 @@ async def get_homepage_sections(
     - Sections are ordered by display_order and creation date
     """
     try:
-        sections = await homepage_section_service.get_all_homepage_sections(
+        sections = await homepage_section_service.get_all_homepage_sections_simplified(
             db=db, 
             active_only=active_only,
             include_products=include_products
