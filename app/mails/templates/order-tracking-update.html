@@ -107,7 +107,7 @@
             <p><strong>Tracking Number:</strong> {{ tracking.tracking_number }}</p>
             {% endif %}
             {% if tracking.estimated_delivery %}
-            <p><strong>Estimated Delivery:</strong> {{ tracking.estimated_delivery|date:"F j, Y" }}</p>
+            <p><strong>Estimated Delivery:</strong> {{ tracking.estimated_delivery.strftime("%B %d, %Y") if tracking.estimated_delivery else "N/A" }}</p>
             {% endif %}
         </div>
         
@@ -123,7 +123,7 @@
                 {% if checkpoint.description %}
                 <div>{{ checkpoint.description }}</div>
                 {% endif %}
-                <div class="checkpoint-time">{{ checkpoint.timestamp|date:"F j, Y H:i" }}</div>
+                <div class="checkpoint-time">{{ checkpoint.timestamp.strftime("%B %d, %Y %H:%M") if checkpoint.timestamp else "N/A" }}</div>
             </div>
             {% endfor %}
         </div>
