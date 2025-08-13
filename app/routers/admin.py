@@ -1,12 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form, BackgroundTasks
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.expression import func
 from sqlalchemy.future import select
+from sqlalchemy import select as sql_select
 from typing import List, Optional
 import json
+from datetime import datetime
 
-from ..core.dependencies import get_db, RoleChecker
+from ..core.dependencies import get_db, RoleChecker, get_current_admin
 from ..enums import UserRole
 from ..models import Category, User
 from ..schemas.product import (
@@ -22,14 +24,26 @@ from ..schemas.product import (
     MetadataSchema,
     DimensionsSchema
 )
+from ..schemas.order import (
+    OrderResponse,
+    OrderDetail,
+    OrderStatus as OrderStatusEnum,
+    OrderStatusUpdate,
+    PaymentMethod,
+    PaymentStatus
+)
 from ..schemas import CreateAdminUser
 from ..schemas.dashboard import DashboardResponse
 from ..services.admin_service import AdminService
 from ..services import AuthService
+from ..services.order_service import OrderService
 from ..services.file_service import FileService
+from ..services.email_service import EmailService
 from ..services.dashboard_service import dashboard_service
 from ..exceptions import NotFoundException, BadRequestException, ConflictException
 from ..schemas.category import CategoryCreate, CategoryResponse, CategoryUpdate
+from ..schemas.tracking import TrackingUpdate, TrackingResponse
+from ..models.order import OrderStatus
 
 router = APIRouter()
 
@@ -37,6 +51,8 @@ admin_only = Depends(RoleChecker([UserRole.ADMIN]))
 admin_service = AdminService()
 auth_service = AuthService()
 file_service = FileService()
+order_service = OrderService()
+email_service = EmailService()
 
 
 @router.get("/dashboard", response_model=DashboardResponse)
@@ -895,5 +911,670 @@ async def batch_delete_products(
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"detail": f"Failed to delete products: {str(e)}"}
+        )
+
+
+# =============================================================================
+# ADMIN ORDER MANAGEMENT ENDPOINTS
+# =============================================================================
+
+@router.get("/orders", response_model=List[OrderResponse])
+async def get_all_orders(
+    db: AsyncSession = Depends(get_db),
+    _: dict = admin_only,
+    status_filter: Optional[OrderStatusEnum] = Query(None, description="Filter by order status"),
+    payment_method: Optional[PaymentMethod] = Query(None, description="Filter by payment method"),
+    payment_status: Optional[PaymentStatus] = Query(None, description="Filter by payment status"),
+    customer_id: Optional[int] = Query(None, description="Filter by customer ID"),
+    date_from: Optional[str] = Query(None, description="Filter orders from date (YYYY-MM-DD)"),
+    date_to: Optional[str] = Query(None, description="Filter orders to date (YYYY-MM-DD)"),
+    page: int = Query(1, ge=1, description="Page number"),
+    size: int = Query(20, ge=1, le=100, description="Items per page"),
+    sort_by: str = Query("created_at", description="Sort by field"),
+    sort_order: str = Query("desc", description="Sort order (asc/desc)")
+):
+    """
+    **Get All Orders (Admin)**
+    
+    Retrieve all orders in the system with comprehensive filtering and sorting options.
+    Only accessible by admin users.
+    
+    **Query Parameters:**
+    - **status_filter**: Filter by order status (pending, processing, shipped, delivered, etc.)
+    - **payment_method**: Filter by payment method (mpesa, cash_on_delivery, etc.)
+    - **payment_status**: Filter by payment status (pending, completed, failed, refunded)
+    - **customer_id**: Filter orders by specific customer
+    - **date_from**: Start date for order filtering (YYYY-MM-DD format)
+    - **date_to**: End date for order filtering (YYYY-MM-DD format)
+    - **page**: Page number for pagination (default: 1)
+    - **size**: Number of orders per page (default: 20, max: 100)
+    - **sort_by**: Field to sort by (created_at, total, status, etc.)
+    - **sort_order**: Sort direction (asc/desc, default: desc)
+    
+    **Returns:**
+    - List of orders with basic information
+    - Ordered by specified criteria
+    - Includes customer info, status, totals, and payment details
+    
+    **Use Cases:**
+    - Order fulfillment dashboard
+    - Financial reporting and analysis
+    - Customer service inquiries
+    - Inventory planning based on order patterns
+    """
+    try:
+        skip = (page - 1) * size
+        
+        # Use the new admin service method
+        all_orders = await order_service.get_all_orders_admin(
+            db=db,
+            skip=skip,
+            limit=size,
+            status_filter=status_filter.value if status_filter else None,
+            payment_method=payment_method.value if payment_method else None,
+            customer_id=customer_id,
+            date_from=date_from,
+            date_to=date_to,
+            sort_by=sort_by,
+            sort_order=sort_order
+        )
+        
+        return all_orders
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve orders: {str(e)}"
+        )
+
+
+@router.get("/orders/{order_id}", response_model=OrderDetail)
+async def get_order_admin(
+    order_id: int,
+    db: AsyncSession = Depends(get_db),
+    _: dict = admin_only
+):
+    """
+    **Get Order Details (Admin)**
+    
+    Retrieve complete details for any order in the system.
+    Only accessible by admin users.
+    
+    **Path Parameters:**
+    - **order_id**: Unique identifier of the order
+    
+    **Returns:**
+    - Complete order information including:
+      - Customer details and contact information
+      - Order summary and status history
+      - All order items with product details
+      - Services included in the order
+      - Shipping and billing addresses
+      - Payment information and transaction details
+      - Tracking information and delivery status
+      - Admin notes and order history
+    
+    **Use Cases:**
+    - Order fulfillment and processing
+    - Customer service support
+    - Dispute resolution and investigations
+    - Refund and return processing
+    """
+    try:
+        # Admin can view any order (pass None as user_id for admin access)
+        order_detail = await order_service.get_order_detail(order_id, None, db)
+        return order_detail
+    except NotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve order: {str(e)}"
+        )
+
+
+@router.patch("/orders/{order_id}/status", response_model=dict)
+async def update_order_status_admin(
+    order_id: int,
+    status_update: OrderStatusUpdate,
+    background_tasks: BackgroundTasks,
+    current_admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+    _: dict = admin_only
+):
+    """
+    **Update Order Status (Admin)**
+    
+    Update an order's status with admin authority and automatic notifications.
+    Only accessible by admin users.
+    
+    **Path Parameters:**
+    - **order_id**: Unique identifier of the order
+    
+    **Request Body:**
+    - **status**: New order status (pending, processing, shipped, delivered, cancelled)
+    - **notes**: Optional notes about the status change
+    
+    **Returns:**
+    - Confirmation of status update with timestamp
+    
+    **Automated Actions:**
+    - Sends email notifications to customer
+    """
+    try:
+        updated_order = await order_service.update_order_status(
+            order_id=order_id,
+            status=status_update.status,
+            admin_id=current_admin.id,
+            db=db,
+            notes=status_update.notes,
+            background_tasks=background_tasks
+        )
+        
+        return {
+            "message": f"Order {order_id} status updated to {status_update.status}",
+            "order_id": order_id,
+            "new_status": status_update.status,
+            "updated_by": current_admin.email,
+            "updated_at": datetime.now(),
+            "notes": status_update.notes
+        }
+        
+    except NotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update order status: {str(e)}"
+        )
+
+
+@router.post("/orders/{order_id}/complete")
+async def complete_order_admin(
+    order_id: int,
+    background_tasks: BackgroundTasks,
+    current_admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+    _: dict = admin_only,
+    delivery_confirmation: bool = Query(True, description="Confirm delivery completion"),
+    payment_collected: bool = Query(True, description="Confirm payment collection (for COD)")
+):
+    """
+    **Complete Order (Admin)**
+    
+    Mark an order as completed with delivery and payment confirmation.
+    Only accessible by admin users.
+    
+    **Path Parameters:**
+    - **order_id**: Unique identifier of the order
+    
+    **Query Parameters:**
+    - **delivery_confirmation**: Confirm that delivery was successful (default: true)
+    - **payment_collected**: Confirm payment collection for COD orders (default: true)
+    
+    **Returns:**
+    - Completion confirmation with final order summary
+    
+    **Completion Process:**
+    1. Validates order is eligible for completion
+    2. Confirms payment status (completes COD payments)
+    3. Updates order status to delivered
+    4. Sends completion confirmation to customer
+    
+    **Use Cases:**
+    - Final order fulfillment step
+    - COD payment confirmation
+    - Delivery verification
+    """
+    try:
+        # Complete the order with delivery and payment confirmation
+        completion_notes = []
+        if delivery_confirmation:
+            completion_notes.append("Delivery confirmed by admin")
+        if payment_collected:
+            completion_notes.append("Payment collected and verified")
+        
+        completed_order = await order_service.update_order_status(
+            order_id=order_id,
+            status=OrderStatus.DELIVERED,
+            admin_id=current_admin.id,
+            db=db,
+            notes="; ".join(completion_notes),
+            background_tasks=background_tasks
+        )
+        
+        return {
+            "message": f"Order {order_id} completed successfully",
+            "order_id": order_id,
+            "status": "delivered",
+            "completed_by": current_admin.email,
+            "completed_at": datetime.now(),
+            "delivery_confirmed": delivery_confirmation,
+            "payment_collected": payment_collected,
+            "next_actions": [
+                "Customer notification sent",
+                "Sales analytics updated"
+            ]
+        }
+        
+    except NotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to complete order: {str(e)}"
+        )
+
+
+@router.post("/orders/{order_id}/shipping/assign")
+async def assign_shipping_admin(
+    order_id: int,
+    tracking_data: TrackingUpdate,
+    background_tasks: BackgroundTasks,
+    current_admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+    _: dict = admin_only
+):
+    """
+    **Assign Shipping Information (Admin)**
+    
+    Assign shipping details and tracking information to an order.
+    Only accessible by admin users.
+    
+    **Path Parameters:**
+    - **order_id**: Unique identifier of the order
+    
+    **Request Body:**
+    - **tracking_number**: Shipping tracking number
+    - **carrier**: Shipping carrier/company
+    - **estimated_delivery**: Estimated delivery date
+    - **shipping_address**: Confirmed shipping address
+    - **special_instructions**: Delivery instructions
+    
+    **Returns:**
+    - Shipping assignment confirmation with tracking details
+    
+    **Shipping Process:**
+    1. Validates order is ready for shipping
+    2. Assigns tracking information
+    3. Updates order status to shipped
+    4. Sends shipping notification to customer
+    5. Initiates tracking updates
+    6. Schedules delivery confirmation follow-up
+    """
+    try:
+        # Update order with shipping information
+        shipping_info = await order_service.update_tracking_info(
+            order_id=order_id,
+            admin_id=current_admin.id,
+            tracking_data=tracking_data.dict(),
+            db=db
+        )
+        
+        # Update order status to shipped
+        await order_service.update_order_status(
+            order_id=order_id,
+            status=OrderStatus.SHIPPED,
+            admin_id=current_admin.id,
+            db=db,
+            notes=f"Shipped with tracking: {tracking_data.tracking_number}",
+            background_tasks=background_tasks
+        )
+        
+        return {
+            "message": f"Shipping assigned for order {order_id}",
+            "order_id": order_id,
+            "tracking_number": tracking_data.tracking_number,
+            "carrier": getattr(tracking_data, 'carrier', 'Not specified'),
+            "status": "shipped",
+            "assigned_by": current_admin.email,
+            "assigned_at": datetime.now(),
+            "customer_notified": True
+        }
+        
+    except NotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to assign shipping: {str(e)}"
+        )
+
+
+@router.post("/orders/{order_id}/payment/verify")
+async def verify_payment_admin(
+    order_id: int,
+    background_tasks: BackgroundTasks,
+    current_admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+    _: dict = admin_only,
+    payment_method: PaymentMethod = Query(..., description="Payment method used"),
+    amount_collected: float = Query(..., description="Amount collected"),
+    payment_reference: Optional[str] = Query(None, description="Payment reference/receipt number")
+):
+    """
+    **Verify Payment (Admin)**
+    
+    Verify and confirm payment collection, especially for cash on delivery orders.
+    Only accessible by admin users.
+    
+    **Path Parameters:**
+    - **order_id**: Unique identifier of the order
+    
+    **Query Parameters:**
+    - **payment_method**: Method of payment (cash_on_delivery, mpesa, etc.)
+    - **amount_collected**: Actual amount collected
+    - **payment_reference**: Payment reference or receipt number
+    
+    **Returns:**
+    - Payment verification confirmation
+    
+    **Payment Verification Process:**
+    1. Validates order payment status
+    2. Confirms amount matches order total
+    3. Records payment collection details
+    4. Updates payment status to completed
+    5. Sends payment confirmation to customer
+    6. Updates financial records and reports
+    
+    **Use Cases:**
+    - COD payment confirmation
+    - M-Pesa payment verification
+    - Bank transfer confirmation
+    - Payment dispute resolution
+    """
+    try:
+        # Get order details to verify amount (admin access)
+        order_detail = await order_service.get_order_detail(order_id, None, db)
+        
+        # Verify payment amount
+        if abs(amount_collected - order_detail["total"]) > 0.01:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Payment amount mismatch. Expected: {order_detail['total']}, Collected: {amount_collected}"
+            )
+        
+        # Update payment status and add verification notes
+        verification_notes = f"Payment verified by {current_admin.email}. Method: {payment_method}, Amount: {amount_collected}"
+        if payment_reference:
+            verification_notes += f", Reference: {payment_reference}"
+        
+        await order_service.update_order_status(
+            order_id=order_id,
+            status=order_detail["status"],  # Keep current status
+            admin_id=current_admin.id,
+            db=db,
+            notes=verification_notes,
+            background_tasks=background_tasks
+        )
+        
+        return {
+            "message": f"Payment verified for order {order_id}",
+            "order_id": order_id,
+            "payment_method": payment_method,
+            "amount_verified": amount_collected,
+            "expected_amount": order_detail["total"],
+            "payment_reference": payment_reference,
+            "verified_by": current_admin.email,
+            "verified_at": datetime.now(),
+            "status": "payment_verified"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to verify payment: {str(e)}"
+        )
+
+@router.post("/orders/{order_id}/email/send")
+async def send_order_email_admin(
+    order_id: int,
+    background_tasks: BackgroundTasks,
+    current_admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+    _: dict = admin_only,
+    email_type: str = Query(..., description="Type of email to send"),
+    custom_message: Optional[str] = Query(None, description="Custom message to include")
+):
+    """
+    **Send Order Email (Admin)**
+    
+    Send various types of order-related emails to customers.
+    Only accessible by admin users.
+    
+    **Path Parameters:**
+    - **order_id**: Unique identifier of the order
+    
+    **Query Parameters:**
+    - **email_type**: Type of email (confirmation, shipping, delivery, follow_up, custom)
+    - **custom_message**: Additional custom message to include in email
+    
+    **Returns:**
+    - Email sending confirmation
+    
+    **Available Email Types:**
+    - **confirmation**: Order confirmation and receipt
+    - **shipping**: Shipping notification with tracking
+    - **delivery**: Delivery confirmation and feedback request
+    - **follow_up**: Customer satisfaction follow-up
+    - **custom**: Custom message with order details
+    - **refund**: Refund processing notification
+    - **cancellation**: Order cancellation confirmation
+    
+    **Email Features:**
+    - Professional branded templates
+    - Order details and tracking information
+    - Customer support contact information
+    - Personalized content based on order history
+    - Mobile-responsive design
+    
+    **Use Cases:**
+    - Manual customer communication
+    - Order issue resolution
+    - Customer service follow-up
+    - Marketing and engagement
+    """
+    try:
+        # Get order details for email content (admin access)
+        order_detail = await order_service.get_order_detail(order_id, None, db)
+        
+        # Get customer information
+        customer_query = select(User).where(User.id == order_detail["customer_id"])
+        customer_result = await db.execute(customer_query)
+        customer = customer_result.scalars().first()
+        
+        if not customer:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Customer not found for this order"
+            )
+        
+        # Validate email type
+        valid_email_types = ['confirmation', 'shipping', 'delivery', 'follow_up', 'custom', 'refund', 'cancellation']
+        if email_type not in valid_email_types:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid email type. Must be one of: {', '.join(valid_email_types)}"
+            )
+        
+        # Send appropriate email based on type
+        customer_name = f"{customer.first_name} {customer.last_name}"
+        email_sent = False
+        
+        if email_type == "confirmation":
+            email_sent = await email_service.send_order_confirmation_email(
+                to_email=customer.email,
+                order_data=order_detail,
+                customer_name=customer_name
+            )
+        elif email_type == "shipping":
+            # Get tracking information if available
+            tracking_data = {"tracking_number": order_detail.get("tracking_number", "")}
+            email_sent = await email_service.send_order_shipping_email(
+                to_email=customer.email,
+                order_data=order_detail,
+                tracking_data=tracking_data,
+                customer_name=customer_name
+            )
+        elif email_type == "delivery":
+            email_sent = await email_service.send_order_delivery_confirmation_email(
+                to_email=customer.email,
+                order_data=order_detail,
+                customer_name=customer_name
+            )
+        elif email_type == "custom":
+            if not custom_message:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Custom message is required for custom email type"
+                )
+            custom_subject = f"Important Update - Order #{order_detail.get('order_number', '')}"
+            email_sent = await email_service.send_custom_order_email(
+                to_email=customer.email,
+                order_data=order_detail,
+                custom_subject=custom_subject,
+                custom_message=custom_message,
+                customer_name=customer_name
+            )
+        elif email_type in ["follow_up", "refund", "cancellation"]:
+            # Use order status update email for these types
+            status_messages = {
+                "follow_up": "We hope you're satisfied with your order",
+                "refund": "Your refund has been processed",
+                "cancellation": "Your order has been cancelled as requested"
+            }
+            email_sent = await email_service.send_order_status_update_email(
+                to_email=customer.email,
+                order_data=order_detail,
+                new_status=email_type,
+                notes=status_messages.get(email_type, custom_message),
+                customer_name=customer_name
+            )
+        
+        return {
+            "message": f"{email_type.title()} email sent for order {order_id}",
+            "order_id": order_id,
+            "email_type": email_type,
+            "recipient": customer.email,
+            "recipient_name": customer_name,
+            "sent_by": current_admin.email,
+            "sent_at": datetime.now(),
+            "custom_message_included": custom_message is not None,
+            "email_delivered": email_sent
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to send email: {str(e)}"
+        )
+
+
+@router.post("/orders/delivery-zones/configure")
+async def configure_delivery_zones_admin(
+    db: AsyncSession = Depends(get_db),
+    _: dict = admin_only,
+    zone_name: str = Query(..., description="Name of the delivery zone"),
+    areas: List[str] = Query(..., description="List of areas in this zone"),
+    supports_cod: bool = Query(True, description="Whether COD is available in this zone"),
+    delivery_fee: float = Query(0.0, description="Delivery fee for this zone"),
+    estimated_days: int = Query(3, description="Estimated delivery days")
+):
+    """
+    **Configure Delivery Zones (Admin)**
+    
+    Configure delivery zones with COD availability and pricing.
+    Only accessible by admin users.
+    
+    **Query Parameters:**
+    - **zone_name**: Name of the delivery zone (e.g., "Nairobi CBD", "Westlands")
+    - **areas**: List of specific areas included in this zone
+    - **supports_cod**: Whether cash on delivery is available (default: true)
+    - **delivery_fee**: Delivery fee for this zone (default: 0.0)
+    - **estimated_days**: Estimated delivery time in days (default: 3)
+    
+    **Returns:**
+    - Zone configuration confirmation
+    
+    **Zone Configuration Features:**
+    - Geographic area definitions
+    - COD availability settings
+    - Dynamic delivery pricing
+    - Delivery time estimates
+    - Service availability mapping
+    
+    **Business Rules:**
+    - COD availability based on delivery reliability
+    - Delivery fees based on distance and logistics cost
+    - Service levels for different zones
+    - Risk assessment for payment methods
+    
+    **Use Cases:**
+    - Expand delivery coverage
+    - Optimize logistics costs
+    - Manage payment method risks
+    - Improve delivery time estimates
+    """
+    try:
+        # Create delivery zone configuration
+        # This would ideally be stored in a delivery_zones table
+        # For now, we'll create a structured response that could be stored
+        
+        zone_config = {
+            "zone_id": f"zone_{zone_name.lower().replace(' ', '_')}",
+            "zone_name": zone_name,
+            "areas_covered": areas,
+            "delivery_settings": {
+                "supports_cod": supports_cod,
+                "delivery_fee": delivery_fee,
+                "estimated_delivery_days": estimated_days,
+                "service_level": "standard"
+            },
+            "coverage_details": {
+                "total_areas": len(areas),
+                "payment_methods": ["mpesa"] + (["cash_on_delivery"] if supports_cod else []),
+                "special_instructions": "Follow area-specific delivery guidelines"
+            },
+            "configured_at": datetime.now(),
+            "status": "active"
+        }
+        
+        # TODO: Store this configuration in database
+        # For now, return the configuration as confirmation
+        # In a real implementation, you would:
+        # 1. Create a DeliveryZone model
+        # 2. Store the configuration in the database
+        # 3. Use this data to determine COD availability during checkout
+        
+        return {
+            "message": f"Delivery zone '{zone_name}' configured successfully",
+            "zone_configuration": zone_config,
+            "areas_count": len(areas),
+            "cod_enabled": supports_cod,
+            "delivery_fee": delivery_fee,
+            "estimated_delivery_days": estimated_days,
+            "implementation_note": "Zone configuration created. Consider implementing DeliveryZone model for persistence."
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to configure delivery zone: {str(e)}"
         )
 

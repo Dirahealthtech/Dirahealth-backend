@@ -32,12 +32,6 @@ class LocationType(str, enum.Enum):
     ON_SITE = "on_site"
     CUSTOMER_LOCATION = "customer_location"
 
-class PaymentStatus(str, enum.Enum):
-    PENDING = "pending"
-    PAID = "paid"
-    REFUNDED = "refunded"
-    FAILED = "failed"
-
 class ReminderMethod(str, enum.Enum):
     EMAIL = "email"
     SMS = "sms"
@@ -119,8 +113,3 @@ class MpesaTransactionStatus(str, enum.Enum):
     CANCELLED = "cancelled"
 
 
-class PaymentMethod(str, enum.Enum):
-    MPESA = "mpesa"
-    CARD = "card"
-    BANK_TRANSFER = "bank_transfer"
-    CASH_ON_DELIVERY = "cash_on_delivery"
