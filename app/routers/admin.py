@@ -405,6 +405,7 @@ async def create_product(
     
     # Shipping
     weight: Optional[float] = Form(None),
+    weight_unit: str = Form("kg"),
     dimensions_length: Optional[float] = Form(None),
     dimensions_width: Optional[float] = Form(None),
     dimensions_height: Optional[float] = Form(None),
@@ -450,6 +451,7 @@ async def create_product(
     
     ### Shipping Information:**
     - **weight**: Product weight (optional)
+    - **weight_unit**: Weight unit (kg, g, lb, oz, etc.) (optional, default: "kg")
     - **dimensions_length**: Length dimension (optional)
     - **dimensions_width**: Width dimension (optional)
     - **dimensions_height**: Height dimension (optional)
@@ -529,6 +531,7 @@ async def create_product(
             
             shipping = ShippingSchema(
                 weight=weight,
+                weight_unit=weight_unit,
                 dimensions=dimensions
             )
         
@@ -691,6 +694,7 @@ async def update_product(
     
     # Shipping fields
     weight: Optional[str] = Form(None),
+    weight_unit: Optional[str] = Form(None),
     dimensions: Optional[str] = Form(None),
     
     # Warranty fields
@@ -740,6 +744,7 @@ async def update_product(
     
     **Shipping:**
     - **weight**: Product weight (JSON string)
+    - **weight_unit**: Weight unit (kg, g, lb, oz, etc.) (JSON string)
     - **dimensions**: Dimensions object (JSON string)
     
     **Warranty:**
@@ -808,6 +813,8 @@ async def update_product(
         shipping_data = {}
         if weight is not None and weight.strip():
             shipping_data["weight"] = float(weight)
+        if weight_unit is not None and weight_unit.strip():
+            shipping_data["weight_unit"] = weight_unit
         if dimensions is not None and dimensions.strip():
             dimensions_json = json.loads(dimensions)
             shipping_data["dimensions"] = dimensions_json
