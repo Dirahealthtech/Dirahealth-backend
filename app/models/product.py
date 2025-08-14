@@ -27,6 +27,7 @@ class Product(Base, TimeStampMixin):
     supports_online_payment = Column(Boolean, default=True)  # Supports online payment
     supports_cod = Column(Boolean, default=True)  # Supports cash on delivery
     weight = Column(Float, nullable=True)
+    weight_unit = Column(String, default="kg", nullable=True)  # Weight unit (kg, g, lb, oz, etc.)
     dimensions = Column(JSON, nullable=True)  # Stores length, width, height and unit
     tags = Column(JSON, nullable=True)  # Stores array of tag strings
     reorder_level = Column(Integer, nullable=True)
