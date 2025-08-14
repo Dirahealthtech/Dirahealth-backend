@@ -68,6 +68,7 @@ class DimensionsSchema(BaseModel):
 
 class ShippingSchema(BaseModel):
     weight: Optional[float] = None
+    weight_unit: str = "kg"
     dimensions: Optional[DimensionsSchema] = None
 
 class WarrantySchema(BaseModel):
@@ -317,10 +318,12 @@ class ProductResponse(BaseModel):
         }
         
         # Map shipping fields if they exist
-        if data.get('weight') or data.get('dimensions'):
+        if data.get('weight') or data.get('weight_unit') or data.get('dimensions'):
             shipping_data = {}
             if data.get('weight'):
                 shipping_data['weight'] = data.get('weight')
+            if data.get('weight_unit'):
+                shipping_data['weight_unit'] = data.get('weight_unit')
             if data.get('dimensions'):
                 shipping_data['dimensions'] = data.get('dimensions')
             data['shipping'] = shipping_data
