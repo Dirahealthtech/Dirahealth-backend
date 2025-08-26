@@ -24,6 +24,15 @@ from ..core.dependencies import get_db
 
 
 class OrderService:
+    def _convert_to_naive_datetime(self, dt: datetime) -> datetime:
+        """Convert timezone-aware datetime to timezone-naive datetime"""
+        if dt is None:
+            return None
+        if dt.tzinfo is not None:
+            # Convert to naive datetime by removing timezone info
+            return dt.replace(tzinfo=None)
+        return dt
+
     async def _get_user_by_id(self, user_id: int, db: AsyncSession) -> User:
         """Get user by ID"""
         user = await db.get(User, user_id)
@@ -340,6 +349,92 @@ class OrderService:
             # Raise a generic exception with a user-friendly message
             raise BadRequestException(f"Failed to retrieve order details: {str(e)}")
 
+    # Admin-specific order management methods
+    async def get_all_orders_admin(
+        self,
+        db: AsyncSession,
+        skip: int = 0,
+        limit: int = 20,
+        status_filter: Optional[str] = None,
+        payment_method: Optional[str] = None,
+        customer_id: Optional[int] = None,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc"
+    ) -> List[Order]:
+        """Get all orders in the system with filtering (Admin only)"""
+        try:
+            query = select(Order)
+            
+            # Apply filters
+            if status_filter:
+                query = query.where(Order.status == status_filter)
+            
+            if payment_method:
+                query = query.where(Order.payment_method == payment_method)
+            
+            if customer_id:
+                query = query.where(Order.customer_id == customer_id)
+            
+            if date_from:
+                try:
+                    from_date = datetime.strptime(date_from, "%Y-%m-%d")
+                    query = query.where(Order.created_at >= from_date)
+                except ValueError:
+                    pass  # Invalid date format, ignore filter
+            
+            if date_to:
+                try:
+                    to_date = datetime.strptime(date_to, "%Y-%m-%d")
+                    # Add 1 day to include the entire end date
+                    to_date = to_date + timedelta(days=1)
+                    query = query.where(Order.created_at < to_date)
+                except ValueError:
+                    pass  # Invalid date format, ignore filter
+            
+            # Apply sorting
+            if hasattr(Order, sort_by):
+                order_field = getattr(Order, sort_by)
+                if sort_order.lower() == "desc":
+                    query = query.order_by(order_field.desc())
+                else:
+                    query = query.order_by(order_field.asc())
+            else:
+                # Default sorting
+                query = query.order_by(Order.created_at.desc())
+            
+            # Apply pagination
+            query = query.offset(skip).limit(limit)
+            
+            result = await db.execute(query)
+            orders = result.scalars().all()
+            
+            return orders
+            
+        except Exception as e:
+            print(f"Error retrieving all orders: {str(e)}")
+            raise BadRequestException(f"Failed to retrieve orders: {str(e)}")
+
+    async def get_order_by_id_admin(self, order_id: int, db: AsyncSession) -> Order:
+        """Get order by ID with admin privileges (no user ownership check)"""
+        try:
+            query = select(Order).where(Order.id == order_id)
+            result = await db.execute(query)
+            order = result.scalars().first()
+            
+            if not order:
+                raise NotFoundException(f"Order with ID {order_id} not found")
+            
+            return order
+            
+        except NotFoundException:
+            raise
+        except Exception as e:
+            print(f"Error retrieving order by ID: {str(e)}")
+            raise BadRequestException(f"Failed to retrieve order: {str(e)}")
+            raise BadRequestException(f"Failed to retrieve order details: {str(e)}")
+
     async def update_order_status(
         self, 
         order_id: int, 
@@ -543,12 +638,16 @@ class OrderService:
         
         if not tracking:
             # Create new tracking record
+            estimated_delivery = tracking_data.get("estimated_delivery")
+            if estimated_delivery:
+                estimated_delivery = self._convert_to_naive_datetime(estimated_delivery)
+                
             tracking = ShipmentTracking(
                 order_id=order_id,
                 status=tracking_data.get("status"),
                 location=tracking_data.get("location"),
                 carrier=tracking_data.get("carrier"),
-                estimated_delivery=tracking_data.get("estimated_delivery"),
+                estimated_delivery=estimated_delivery,
                 tracking_number=tracking_data.get("tracking_number"),
                 details=tracking_data.get("details", {})
             )
@@ -562,8 +661,8 @@ class OrderService:
                 order.tracking_number = tracking_data["tracking_number"]
                 
             # Update estimated delivery if provided
-            if tracking_data.get("estimated_delivery"):
-                order.estimated_delivery = tracking_data["estimated_delivery"]
+            if estimated_delivery:
+                order.estimated_delivery = estimated_delivery
         else:
             # Update tracking information
             if tracking_data.get("status"):
@@ -576,11 +675,12 @@ class OrderService:
                 tracking.carrier = tracking_data["carrier"]
                 
             if tracking_data.get("estimated_delivery"):
-                tracking.estimated_delivery = tracking_data["estimated_delivery"]
+                estimated_delivery = self._convert_to_naive_datetime(tracking_data["estimated_delivery"])
+                tracking.estimated_delivery = estimated_delivery
                 
                 # Update order estimated delivery
                 order = await self.get_order_by_id(order_id, None, db)
-                order.estimated_delivery = tracking_data["estimated_delivery"]
+                order.estimated_delivery = estimated_delivery
                 
             if tracking_data.get("tracking_number"):
                 tracking.tracking_number = tracking_data["tracking_number"]
@@ -605,12 +705,17 @@ class OrderService:
             if tracking.id is None:
                 await db.flush()
                 
+            # Get checkpoint timestamp and convert if timezone-aware
+            checkpoint_timestamp = tracking_data["checkpoint"].get("timestamp", datetime.now())
+            if checkpoint_timestamp:
+                checkpoint_timestamp = self._convert_to_naive_datetime(checkpoint_timestamp)
+                
             checkpoint = ShipmentCheckpoint(
                 shipment_id=tracking.id,
                 status=tracking_data["checkpoint"].get("status", tracking.status),
                 location=tracking_data["checkpoint"].get("location", tracking.location),
                 description=tracking_data["checkpoint"].get("description"),
-                timestamp=tracking_data["checkpoint"].get("timestamp", datetime.now())
+                timestamp=checkpoint_timestamp
             )
             db.add(checkpoint)
 

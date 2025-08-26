@@ -32,12 +32,6 @@ class LocationType(str, enum.Enum):
     ON_SITE = "on_site"
     CUSTOMER_LOCATION = "customer_location"
 
-class PaymentStatus(str, enum.Enum):
-    PENDING = "pending"
-    PAID = "paid"
-    REFUNDED = "refunded"
-    FAILED = "failed"
-
 class ReminderMethod(str, enum.Enum):
     EMAIL = "email"
     SMS = "sms"
@@ -102,3 +96,20 @@ class ActivityType(str, enum.Enum):
     VIEW = "view"
     PURCHASE = "purchase"
     SEARCH = "search"
+
+
+class MpesaTransactionType(str, enum.Enum):
+    C2B = "c2b"  # Customer to Business (STK Push)
+    B2C = "b2c"  # Business to Customer (Payout)
+    B2B = "b2b"  # Business to Business
+    REVERSAL = "reversal"  # Transaction reversal
+
+
+class MpesaTransactionStatus(str, enum.Enum):
+    PENDING = "pending"
+    SUCCESS = "success"
+    FAILED = "failed"
+    TIMEOUT = "timeout"
+    CANCELLED = "cancelled"
+
+

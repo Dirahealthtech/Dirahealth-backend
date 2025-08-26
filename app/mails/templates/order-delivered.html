@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Order Delivered</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif; 
+            line-height: 1.6;
+            color: #333333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #28a745;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 4px 4px 0 0;
+        }
+        .content {
+            background-color: #f8f9fa;
+            padding: 30px;
+            border: 1px solid #dee2e6;
+            border-top: none;
+        }
+        .delivery-info {
+            background-color: white;
+            padding: 20px;
+            border-radius: 4px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }
+        .feedback-section {
+            background-color: #e8f5e8;
+            padding: 20px;
+            border-radius: 4px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .footer {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 0 0 4px 4px;
+            font-size: 14px;
+        }
+        .button {
+            display: inline-block;
+            background-color: #28a745;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 4px;
+            margin: 10px 5px;
+            text-decoration: none;
+        }
+        .feedback-button {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .checkmark {
+            font-size: 48px;
+            color: #28a745;
+            margin-bottom: 15px;
+        }
+        .satisfaction-note {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="checkmark">✅</div>
+        <h1>Order Delivered Successfully!</h1>
+    </div>
+    
+    <div class="content">
+        <p>Dear {{ customer_name }},</p>
+        
+        <p>Wonderful news! Your order has been successfully delivered and should now be in your hands.</p>
+        
+        <div class="delivery-info">
+            <h3>Order #{{ order.order_number }}</h3>
+            <p><strong>Order Total:</strong> KSh {{ order.total }}</p>
+            <p><strong>Status:</strong> <span style="color: #28a745; font-weight: bold;">Delivered</span></p>
+            {% if order.tracking_number %}
+            <p><strong>Tracking Number:</strong> {{ order.tracking_number }}</p>
+            {% endif %}
+        </div>
+        
+        <div class="satisfaction-note">
+            <h4>We Hope You Love Your Order! 💚</h4>
+            <p>Your satisfaction is our top priority. If everything arrived as expected, we'd love to hear about your experience!</p>
+        </div>
+        
+        <div class="feedback-section">
+            <h3>How Was Your Experience?</h3>
+            <p>Your feedback helps us improve our service and helps other customers make informed decisions.</p>
+            
+            <div style="margin: 20px 0;">
+                {% if feedback_url %}
+                <a href="{{ feedback_url }}" class="button feedback-button">Leave a Review</a>
+                {% endif %}
+                <a href="{{ order.frontend_url }}/orders/{{ order.id }}" class="button">View Order Details</a>
+            </div>
+        </div>
+        
+        <div class="delivery-info">
+            <h4>What to do if there's an issue:</h4>
+            <ul>
+                <li><strong>Missing items:</strong> Contact us immediately at support@dirahealthcare.com</li>
+                <li><strong>Damaged products:</strong> Take photos and reach out to our support team</li>
+                <li><strong>Wrong items:</strong> We'll arrange for immediate replacement</li>
+                <li><strong>Quality concerns:</strong> Your satisfaction is guaranteed</li>
+            </ul>
+            <p><em>We offer a 30-day return policy on most items for your peace of mind.</em></p>
+        </div>
+        
+        <p><strong>Need support?</strong> Our customer service team is available to help with any questions or concerns about your order.</p>
+        
+        <p>Thank you for choosing Dira Healthcare for your health and wellness needs!</p>
+        
+        <p>Best regards,<br>
+        The Dira Healthcare Team</p>
+    </div>
+    
+    <div class="footer">
+        <p>&copy; {{ current_year }} Dira Healthcare. All rights reserved.</p>
+        <p>Need help? Contact us at support@dirahealthcare.com or call +254-XXX-XXXX</p>
+        <p>Follow us on social media for health tips and updates!</p>
+    </div>
+</body>
+</html>

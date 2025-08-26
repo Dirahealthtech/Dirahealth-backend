@@ -1,7 +1,10 @@
-from pydantic import BaseModel, field_validator, model_validator
-from typing import Optional, Dict, Any, List
+from pydantic import BaseModel, model_validator, field_validator
+from typing import List, Optional
 from datetime import datetime
 import bleach
+
+from .product import ProductResponse
+
 
 # Try to import CSS sanitizer if available
 try:
@@ -36,68 +39,20 @@ try:
 except ImportError:
     CSS_SANITIZER = None
 
-# Sub-schemas for nested structures
-class PricingSchema(BaseModel):
-    price: float
-    discounted_price: Optional[float] = 0.0
-    tax_rate: Optional[float] = 0.0
 
-class InventorySchema(BaseModel):
-    sku: str
-    stock: int
-    reorder_level: Optional[int] = None
-    requires_prescription: bool = False
-    is_active: bool = True
-    supports_online_payment: bool = True
-    supports_cod: bool = True
-
-class InventoryUpdateSchema(BaseModel):
-    sku: Optional[str] = None
-    stock: Optional[int] = None
-    reorder_level: Optional[int] = None
-    requires_prescription: Optional[bool] = None
-    is_active: Optional[bool] = None
-    supports_online_payment: Optional[bool] = None
-    supports_cod: Optional[bool] = None
-
-class DimensionsSchema(BaseModel):
-    length: Optional[float] = None
-    width: Optional[float] = None
-    height: Optional[float] = None
-    unit: str = "cm"
-
-class ShippingSchema(BaseModel):
-    weight: Optional[float] = None
-    weight_unit: str = "kg"
-    dimensions: Optional[DimensionsSchema] = None
-
-class WarrantySchema(BaseModel):
-    period: Optional[int] = None
-    unit: Optional[str] = None
-    description: Optional[str] = None
-
-class MetadataSchema(BaseModel):
-    tags: Optional[List[str]] = None
-    specifications: Optional[Dict[str, Any]] = None
-
-# Simplified schema for homepage/activity endpoints
-class SimpleProductResponse(BaseModel):
+# Simplified schemas for public API
+class SimplifiedProductResponse(BaseModel):
     id: int
     slug: str
     name: str
-    category_id: int
-    pricing: PricingSchema
+    price: float
+    discounted_price: Optional[float] = None
     images: Optional[str] = None
 
     @model_validator(mode='before')
     @classmethod
-    def map_flat_to_nested(cls, data):
-        """Map flat database fields to nested schema structure"""
-        # Handle None data
-        if data is None:
-            raise ValueError("Product data cannot be None")
-        
-        # Convert SQLAlchemy model to dict if needed
+    def extract_pricing_fields(cls, data):
+        """Extract price and discounted_price from nested pricing structure"""
         if hasattr(data, '__dict__'):
             data_dict = {}
             for key, value in data.__dict__.items():
@@ -105,32 +60,40 @@ class SimpleProductResponse(BaseModel):
                     data_dict[key] = value
             data = data_dict
         
-        # Ensure data is a dictionary
-        if not isinstance(data, dict):
-            raise ValueError(f"Expected dict or SQLAlchemy model, got {type(data)}")
-        
-        # Map pricing fields
-        data['pricing'] = {
-            'price': data.get('price', 0.0),
-            'discounted_price': data.get('discounted_price', 0.0)
-        }
+        if isinstance(data, dict):
+            # If pricing is nested, extract it
+            if 'pricing' in data and isinstance(data['pricing'], dict):
+                data['price'] = data['pricing'].get('price', 0.0)
+                data['discounted_price'] = data['pricing'].get('discounted_price', 0.0)
+            elif hasattr(data.get('pricing'), 'price'):
+                # Handle case where pricing is a Pydantic object
+                pricing = data['pricing']
+                data['price'] = pricing.price
+                data['discounted_price'] = pricing.discounted_price
         
         return data
 
     class Config:
         from_attributes = True
 
-class ProductBase(BaseModel):
-    name: str
-    description: str  # Rich HTML content from TinyMCE/WYSIWYG
-    category_id: int
-    supplier_id: Optional[int] = None
-    pricing: PricingSchema
-    inventory: InventorySchema
-    images: Optional[str] = None
-    shipping: Optional[ShippingSchema] = None
-    warranty: Optional[WarrantySchema] = None
-    metadata: Optional[MetadataSchema] = None
+
+class SimplifiedHomepageSectionResponse(BaseModel):
+    title: str
+    display_order: int
+    is_active: bool
+    id: int
+    products: List[SimplifiedProductResponse] = []
+
+    class Config:
+        from_attributes = True
+
+
+# Original detailed schemas
+class HomepageSectionBase(BaseModel):
+    title: str
+    description: Optional[str] = None
+    display_order: int = 0
+    is_active: bool = True
 
     @field_validator('description', mode='before')
     @classmethod
@@ -186,28 +149,17 @@ class ProductBase(BaseModel):
         
         return sanitized
 
-class ProductCreate(ProductBase):
-    pass
 
-class ProductUpdate(BaseModel):
-    name: Optional[str] = None
+class HomepageSectionCreate(HomepageSectionBase):
+    product_ids: Optional[List[int]] = []
+
+
+class HomepageSectionUpdate(BaseModel):
+    title: Optional[str] = None
     description: Optional[str] = None
-    category_id: Optional[int] = None
-    supplier_id: Optional[int] = None
-    pricing: Optional[PricingSchema] = None
-    inventory: Optional[InventoryUpdateSchema] = None
-    images: Optional[str] = None
-    shipping: Optional[ShippingSchema] = None
-    warranty: Optional[WarrantySchema] = None
-    metadata: Optional[MetadataSchema] = None
-
-    @field_validator('supplier_id', mode='before')
-    @classmethod
-    def validate_supplier_id(cls, v):
-        """Convert supplier_id of 0 to None (no supplier)"""
-        if v == 0:
-            return None
-        return v
+    display_order: Optional[int] = None
+    is_active: Optional[bool] = None
+    product_ids: Optional[List[int]] = None
 
     @field_validator('description', mode='before')
     @classmethod
@@ -244,7 +196,7 @@ class ProductUpdate(BaseModel):
             'caption': ['style'],
             'sub': ['style'], 'sup': ['style'],
             'small': ['style'], 'mark': ['style'], 'del': ['style'], 'ins': ['style'],
-            '*': ['class']
+            '*': ['class']  # Allow class attribute on all tags
         }
         
         # Define allowed protocols for links
@@ -263,102 +215,105 @@ class ProductUpdate(BaseModel):
         
         return sanitized
 
-class ProductResponse(BaseModel):
+
+class HomepageSectionResponse(HomepageSectionBase):
     id: int
-    slug: str
-    name: str
-    description: str  # Sanitized rich HTML
-    category_id: int
-    supplier_id: Optional[int] = None
-    pricing: PricingSchema
-    inventory: InventorySchema
-    images: Optional[str] = None
-    shipping: Optional[ShippingSchema] = None
-    warranty: Optional[WarrantySchema] = None
-    metadata: Optional[MetadataSchema] = None
+    is_active: bool
+    slug: Optional[str] = None
     created_at: datetime
     updated_at: datetime
-    
+    products: List[ProductResponse] = []
+
     @model_validator(mode='before')
     @classmethod
-    def map_flat_to_nested(cls, data):
-        """Map flat database fields to nested schema structure"""
-        # Handle None data
-        if data is None:
-            raise ValueError("Product data cannot be None")
-        
-        # Convert SQLAlchemy model to dict if needed
+    def generate_slug_if_missing(cls, data):
+        """Generate slug from title if slug is None"""
         if hasattr(data, '__dict__'):
+            # Convert SQLAlchemy object to dict
             data_dict = {}
             for key, value in data.__dict__.items():
                 if not key.startswith('_'):
                     data_dict[key] = value
             data = data_dict
         
-        # Ensure data is a dictionary
-        if not isinstance(data, dict):
-            raise ValueError(f"Expected dict or SQLAlchemy model, got {type(data)}")
-        
-        # Map pricing fields
-        data['pricing'] = {
-            'price': data.get('price', 0.0),
-            'discounted_price': data.get('discounted_price', 0.0),
-            'tax_rate': data.get('tax_rate', 0.0)
-        }
-        
-        # Map inventory fields
-        data['inventory'] = {
-            'sku': data.get('sku', ''),
-            'stock': data.get('stock', 0),
-            'reorder_level': data.get('reorder_level'),
-            'requires_prescription': data.get('requires_prescription', False),
-            'is_active': data.get('is_active', True),
-            'supports_online_payment': data.get('supports_online_payment') if data.get('supports_online_payment') is not None else True,
-            'supports_cod': data.get('supports_cod') if data.get('supports_cod') is not None else True
-        }
-        
-        # Map shipping fields if they exist
-        if data.get('weight') or data.get('weight_unit') or data.get('dimensions'):
-            shipping_data = {}
-            if data.get('weight'):
-                shipping_data['weight'] = data.get('weight')
-            if data.get('weight_unit'):
-                shipping_data['weight_unit'] = data.get('weight_unit')
-            if data.get('dimensions'):
-                shipping_data['dimensions'] = data.get('dimensions')
-            data['shipping'] = shipping_data
-        
-        # Map warranty fields if they exist
-        if data.get('warranty_period') or data.get('warranty_unit') or data.get('warranty_description'):
-            warranty_data = {}
-            if data.get('warranty_period'):
-                warranty_data['period'] = data.get('warranty_period')
-            if data.get('warranty_unit'):
-                warranty_data['unit'] = data.get('warranty_unit')
-            if data.get('warranty_description'):
-                warranty_data['description'] = data.get('warranty_description')
-            data['warranty'] = warranty_data
-        
-        # Map metadata fields if they exist
-        if data.get('tags') or data.get('specifications'):
-            metadata_data = {}
-            if data.get('tags'):
-                metadata_data['tags'] = data.get('tags')
-            if data.get('specifications'):
-                metadata_data['specifications'] = data.get('specifications')
-            data['metadata'] = metadata_data
+        if isinstance(data, dict) and (data.get('slug') is None):
+            title = data.get('title', '')
+            if title:
+                # Generate slug from title
+                import re
+                slug = re.sub(r'[^a-zA-Z0-9\s-]', '', title.lower())
+                slug = re.sub(r'\s+', '-', slug).strip('-')
+                data['slug'] = slug or 'homepage-section'
         
         return data
-    
+
     class Config:
         from_attributes = True
 
-class ProductListResponse(BaseModel):
-    items: List[ProductResponse]
-    total: int
-    page: int
-    size: int
-    pages: int
-    
+
+class HomepageSectionListResponse(BaseModel):
+    id: int
+    title: str
+    description: Optional[str] = None
+    display_order: int
+    is_active: bool
+    product_count: int
+    created_at: datetime
+
+
+    @field_validator('description', mode='before')
+    @classmethod
+    def sanitize_html_description(cls, v):
+        """Sanitize HTML description from rich text editor using bleach"""
+        if not v:
+            return v
+        
+        # Define allowed HTML tags for rich text content
+        allowed_tags = [
+            'p', 'br', 'strong', 'b', 'em', 'i', 'u', 'ul', 'ol', 'li',
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'span',
+            'div', 'a', 'img', 'table', 'tr', 'td', 'th', 'thead', 'tbody',
+            'tfoot', 'caption', 'sub', 'sup', 'small', 'mark', 'del', 'ins'
+        ]
+        
+        # Define allowed attributes for specific tags
+        allowed_attributes = {
+            'a': ['href', 'title', 'target', 'style'],
+            'img': ['src', 'alt', 'title', 'width', 'height', 'style'],
+            'p': ['style'],
+            'span': ['style'],
+            'div': ['style'],
+            'h1': ['style'], 'h2': ['style'], 'h3': ['style'], 
+            'h4': ['style'], 'h5': ['style'], 'h6': ['style'],
+            'strong': ['style'], 'b': ['style'], 'em': ['style'], 'i': ['style'], 'u': ['style'],
+            'ul': ['style'], 'ol': ['style'], 'li': ['style'],
+            'blockquote': ['style'],
+            'table': ['style', 'border', 'cellpadding', 'cellspacing'],
+            'tr': ['style'],
+            'td': ['style', 'colspan', 'rowspan'],
+            'th': ['style', 'colspan', 'rowspan'],
+            'thead': ['style'], 'tbody': ['style'], 'tfoot': ['style'],
+            'caption': ['style'],
+            'sub': ['style'], 'sup': ['style'],
+            'small': ['style'], 'mark': ['style'], 'del': ['style'], 'ins': ['style'],
+            '*': ['class']  # Allow class attribute on all tags
+        }
+        
+        # Define allowed protocols for links
+        allowed_protocols = ['http', 'https', 'mailto']
+        
+        # Sanitize the HTML using bleach with enhanced security
+        sanitized = bleach.clean(
+            v,
+            tags=allowed_tags,
+            attributes=allowed_attributes,
+            protocols=allowed_protocols,
+            strip=True,  # Remove disallowed tags entirely
+            strip_comments=True,  # Remove HTML comments
+            css_sanitizer=CSS_SANITIZER  # CSS sanitization if available
+        )
+        
+        return sanitized
+
     class Config:
         from_attributes = True

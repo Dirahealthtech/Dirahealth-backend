@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from ..core.dependencies import get_anonymous_user, get_db
 from ..models import User
-from ..schemas.product import ProductResponse
+from ..schemas.product import ProductResponse, SimpleProductResponse
 from ..schemas.category import CategoryResponse
 from ..services.user_activity_service import UserActivityService
 from ..exceptions import NotFoundException
@@ -38,32 +38,41 @@ async def get_top_picks(
     This endpoint returns a list of recommended items or activities for the authenticated user,
     based on their activity history or preferences.
 
-    Args:
-        current_user (User): The currently authenticated user, injected by dependency.
-        service (UserActivityService): The user activity service, injected by dependency.
+    **Args**:
+    - **current_user (User)**: The currently authenticated user, injected by dependency.
+    - **service (UserActivityService)**: The user activity service, injected by dependency.
 
     Returns:
-        List[Any]: A list of top picks or recommendations for the user.
-
-    Raises:
-        HTTPException: If the user is not authenticated or an error occurs during retrieval.
+    - **List[Any]**: A list of top picks or recommendations for the user.
     """
     return await service.get_top_picks(current_user, anonymous_user)
 
 
-@router.get('/homepage', response_model=List[ProductResponse])
-async def get_products(service: UserActivityService = Depends(get_user_activity_service)):
+@router.get('/homepage', response_model=List[SimpleProductResponse])
+async def get_products(
+    name: Optional[str] = Query(None, description="Filter products by name (partial match)"),
+    service: UserActivityService = Depends(get_user_activity_service)
+):
     """
     Retrieve available products to users. This endpoint returns a list of products sold by suppliers
     via the website.
+    
+    **Query Parameters:**
+    
+    - **name**: Filter products by name (optional, partial match, case-insensitive)
     """
-    return await service.get_products()
+    return await service.get_products(name=name)
 
 @router.get('/product/{slug}', response_model=ProductResponse)
 async def get_product_details_by_slug(
     slug: str,
     service: UserActivityService = Depends(get_user_activity_service),
 ):
+    '''
+    This endpoint retrieves products by their slug
+    **Args**:
+    - **slug**: product slug that will be retrieved
+    '''
     try:
         result  = await service.get_product_by_slug(slug)
         return result

@@ -126,7 +126,7 @@ async def get_my_reviews(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.put("/{review_id}", response_model=ReviewResponse)
+@router.patch("/{review_id}", response_model=ReviewResponse)
 async def update_review(
     review_id: int,
     review_data: ReviewUpdate,

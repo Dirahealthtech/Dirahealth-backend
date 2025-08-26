@@ -28,6 +28,15 @@ class Settings(BaseSettings):
     MAIL_SSL_TLS: bool
     USE_CREDENTIALS: bool
     VALIDATE_CERTS: bool
+    
+    # M-Pesa Configuration
+    MPESA_ENVIRONMENT: str = "sandbox"
+    MPESA_CONSUMER_KEY: str
+    MPESA_CONSUMER_SECRET: str  
+    MPESA_BUSINESS_SHORT_CODE: str
+    MPESA_PASSKEY: str
+    MPESA_CALLBACK_URL: str
+    MPESA_BUSINESS_NAME: str
 
     model_config = SettingsConfigDict(
         env_file='.env',

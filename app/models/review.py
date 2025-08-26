@@ -9,7 +9,7 @@ class Review(Base, TimeStampMixin):
     __tablename__ = "reviews"
 
     id = Column(Integer, primary_key=True, index=True)
-    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     rating = Column(Float, nullable=False)  # 1-5 star rating
     title = Column(String(200), nullable=True)
@@ -28,7 +28,7 @@ class ReviewVote(Base, TimeStampMixin):
     __tablename__ = "review_votes"
 
     id = Column(Integer, primary_key=True, index=True)
-    review_id = Column(Integer, ForeignKey("reviews.id"), nullable=False)
+    review_id = Column(Integer, ForeignKey("reviews.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     is_helpful = Column(Boolean, nullable=False)  # True for helpful, False for not helpful
 

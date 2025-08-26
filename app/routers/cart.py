@@ -63,7 +63,7 @@ async def apply_coupon(
     """Apply a coupon to the cart"""
     return await cart_service.apply_coupon(current_user.id, coupon_code, db)
 
-@router.put("/items/{item_id}")
+@router.patch("/items/{item_id}")
 async def update_cart_item_quantity(
     item_id: int,
     quantity: int,

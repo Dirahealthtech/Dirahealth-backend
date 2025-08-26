@@ -24,7 +24,10 @@ class Product(Base, TimeStampMixin):
     specifications = Column(JSON)  # Stores specifications as key-value pairs
     requires_prescription = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
+    supports_online_payment = Column(Boolean, default=True)  # Supports online payment
+    supports_cod = Column(Boolean, default=True)  # Supports cash on delivery
     weight = Column(Float, nullable=True)
+    weight_unit = Column(String, default="kg", nullable=True)  # Weight unit (kg, g, lb, oz, etc.)
     dimensions = Column(JSON, nullable=True)  # Stores length, width, height and unit
     tags = Column(JSON, nullable=True)  # Stores array of tag strings
     reorder_level = Column(Integer, nullable=True)
@@ -39,6 +42,7 @@ class Product(Base, TimeStampMixin):
     order_items = relationship("OrderItem", back_populates="product")
     cart_items = relationship("CartItem", back_populates="product")
     flash_sales = relationship("FlashSale", secondary="flash_sale_products", back_populates="products")
+    homepage_sections = relationship("HomepageSection", secondary="homepage_section_products", back_populates="products")
     reviews = relationship("Review", back_populates="product", cascade="all, delete-orphan")
 
 
