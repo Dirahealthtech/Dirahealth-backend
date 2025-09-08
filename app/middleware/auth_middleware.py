@@ -2,9 +2,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
-
 api_version = 'v1'
-
 
 class CustomAuthMiddleWare(BaseHTTPMiddleware):
     """
@@ -27,14 +25,19 @@ class CustomAuthMiddleWare(BaseHTTPMiddleware):
         if request.method == "OPTIONS":
             return await call_next(request)
             
-        # Allow unauthenticated access to specific routes
+        # Get the path and normalize it
         path = request.url.path.rstrip("/")
+        
+        # Handle root path explicitly
+        if path == "" or path == "/":
+            return await call_next(request)
 
         allowed_paths = [
-            # Root and health endpoints
-            "",  # Empty string for root path
+            # Health and utility endpoints
             "/health",
             "/favicon.ico",
+            "/robots.txt",
+            "/sitemap.xml",
             
             # Documentation endpoints
             "/openapi.json",
@@ -68,7 +71,7 @@ class CustomAuthMiddleWare(BaseHTTPMiddleware):
         if any(path == prefix or path.startswith(prefix + "/") for prefix in allowed_paths):
             return await call_next(request)
 
-        
+        # Check for authorization header
         if "Authorization" not in request.headers:
             return JSONResponse(
                 content={
