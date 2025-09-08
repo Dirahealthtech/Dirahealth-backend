@@ -31,6 +31,7 @@ class CustomAuthMiddleWare(BaseHTTPMiddleware):
             f"/api/{api_version}/docs",
             f"/api/{api_version}/redoc",
             f"/api/{api_version}/auth/login",
+            f"/api/{api_version}/openapi.json", 
             f"/api/{api_version}/auth/signup",
             f"/api/{api_version}/auth/request-verification-link",
             f"/api/{api_version}/auth/verify-account",
