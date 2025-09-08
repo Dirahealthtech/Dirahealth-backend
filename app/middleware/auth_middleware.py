@@ -68,7 +68,7 @@ class CustomAuthMiddleWare(BaseHTTPMiddleware):
         if any(path == prefix or path.startswith(prefix + "/") for prefix in allowed_paths):
             return await call_next(request)
 
-        # Check for authorization header
+        
         if "Authorization" not in request.headers:
             return JSONResponse(
                 content={
