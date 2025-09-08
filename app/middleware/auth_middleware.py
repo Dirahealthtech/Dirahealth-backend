@@ -23,24 +23,40 @@ class CustomAuthMiddleWare(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request: Request, call_next):
+        # Always allow OPTIONS requests (CORS preflight)
+        if request.method == "OPTIONS":
+            return await call_next(request)
+            
         # Allow unauthenticated access to specific routes
         path = request.url.path.rstrip("/")
 
         allowed_paths = [
+            # Root and health endpoints
+            "",  # Empty string for root path
+            "/health",
+            "/favicon.ico",
+            
+            # Documentation endpoints
             "/openapi.json",
+            f"/api/{api_version}/openapi.json", 
             f"/api/{api_version}/docs",
             f"/api/{api_version}/redoc",
+            
+            # Authentication endpoints
             f"/api/{api_version}/auth/login",
-            f"/api/{api_version}/openapi.json", 
             f"/api/{api_version}/auth/signup",
             f"/api/{api_version}/auth/request-verification-link",
             f"/api/{api_version}/auth/verify-account",
             f"/api/{api_version}/auth/reset-password",
             f"/api/{api_version}/auth/confirm-reset-password",
+            
+            # Admin endpoints
             f"/api/{api_version}/admin/setup-initial-admin",
             f"/api/{api_version}/admin/list-categories",
             f"/api/{api_version}/admin/list-products",
             f"/api/{api_version}/admin/get-products",
+            
+            # Public endpoints
             f"/api/{api_version}/reviews/product",
             f"/api/{api_version}/homepage-sections",
             f"/api/{api_version}/user/activity/homepage",
@@ -48,11 +64,11 @@ class CustomAuthMiddleWare(BaseHTTPMiddleware):
             f"/api/{api_version}/user/activity/product"
         ]
 
-
+        # Check if path is allowed
         if any(path == prefix or path.startswith(prefix + "/") for prefix in allowed_paths):
             return await call_next(request)
 
-
+        # Check for authorization header
         if "Authorization" not in request.headers:
             return JSONResponse(
                 content={
