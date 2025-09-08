@@ -188,7 +188,8 @@ class OrderService:
             await db.refresh(new_order)
             
             # Schedule order confirmation email as a background task
-            background_tasks.add_task(self.send_order_confirmation, new_order, db)
+            background_tasks.add_task(self._send_order_confirmation_background, new_order.id)
+
             
             return new_order
             
@@ -205,6 +206,84 @@ class OrderService:
             
             # Raise a generic exception with a user-friendly message
             raise BadRequestException(f"Failed to create order: {str(e)}")
+        
+
+    async def _send_order_confirmation_background(self, order_id: int) -> None:
+        """Background task to send order confirmation email"""
+        # Create a new session for the background task
+        db_generator = get_db()
+        db = await anext(db_generator)
+        try:
+            order = await self.get_order_by_id(order_id, None, db)
+            customer = await self._get_user_by_id(order.customer_id, db)
+            
+            # Get order items with product details for the email
+            items_query = (
+                select(OrderItem, Product)
+                .join(Product)
+                .where(OrderItem.order_id == order_id)
+            )
+            items_result = await db.execute(items_query)
+            items_data = items_result.all()
+            
+            # Get order services with service details
+            services_query = (
+                select(OrderServiceModel, Service)
+                .join(Service)
+                .where(OrderServiceModel.order_id == order_id)
+            )
+            services_result = await db.execute(services_query)
+            services_data = services_result.all()
+            
+            # Format items for email template
+            items = []
+            for item, product in items_data:
+                items.append({
+                    "name": product.name,
+                    "quantity": item.quantity,
+                    "price": item.price,
+                    "total": item.price * item.quantity - item.discount
+                })
+            
+            # Format services for email template
+            services = []
+            for service_item, service in services_data:
+                services.append({
+                    "name": service.name,
+                    "price": service_item.price
+                })
+            
+            order_data = {
+                "id": order.id,
+                "order_number": order.order_number,
+                "status": order.status.value if hasattr(order.status, 'value') else str(order.status),
+                "customer_name": getattr(customer, 'full_name', customer.email),
+                "subtotal": order.subtotal,
+                "tax": order.tax,
+                "shipping_cost": order.shipping_cost,
+                "discount": order.discount,
+                "total": order.total,
+                "payment_method": order.payment_method.value if hasattr(order.payment_method, 'value') else str(order.payment_method),
+                "shipping_address": order.shipping_address,
+                "items": items,
+                "services": services,
+                "frontend_url": Config.DOMAIN,
+                "current_year": datetime.now().year,
+                "created_at": order.created_at
+            }
+            
+            # Send email
+            email_service = EmailService()
+            await email_service.send_order_confirmation_email(
+                to_email=customer.email,
+                order_data=order_data,
+                customer_name=getattr(customer, 'full_name', 'Valued Customer')
+            )
+            
+        except Exception as e:
+            print(f"Background order confirmation email error: {str(e)}")
+        finally:
+            await db.close()    
 
     async def get_order_by_id(self, order_id: int, user_id: Optional[int], db: AsyncSession) -> Order:
         """

@@ -1,5 +1,6 @@
 import base64
 import json
+import os
 from datetime import datetime
 from typing import Optional, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,23 +24,58 @@ from ..enums import MpesaTransactionType, MpesaTransactionStatus
 from ..core.config import Settings
 
 
+class MpesaConfig:
+    """Configuration class for M-Pesa settings"""
+    def __init__(self):
+        self.environment = os.getenv("MPESA_ENVIRONMENT", "sandbox")
+        self.consumer_key = os.getenv("MPESA_CONSUMER_KEY")
+        self.consumer_secret = os.getenv("MPESA_CONSUMER_SECRET")
+        self.business_short_code = os.getenv("MPESA_BUSINESS_SHORT_CODE")
+        self.lipa_na_mpesa_passkey = os.getenv("MPESA_PASSKEY")
+        self.callback_url = os.getenv("MPESA_CALLBACK_URL")
+        self.business_name = os.getenv("MPESA_BUSINESS_NAME", "Dira Healthcare")
+        
+        # Validate required fields
+        required_fields = [
+            self.consumer_key, self.consumer_secret, self.business_short_code,
+            self.lipa_na_mpesa_passkey, self.callback_url
+        ]
+        
+        if not all(required_fields):
+            missing_fields = []
+            if not self.consumer_key:
+                missing_fields.append("MPESA_CONSUMER_KEY")
+            if not self.consumer_secret:
+                missing_fields.append("MPESA_CONSUMER_SECRET")
+            if not self.business_short_code:
+                missing_fields.append("MPESA_BUSINESS_SHORT_CODE")
+            if not self.lipa_na_mpesa_passkey:
+                missing_fields.append("MPESA_PASSKEY")
+            if not self.callback_url:
+                missing_fields.append("MPESA_CALLBACK_URL")
+                
+            raise ValueError(f"Missing required M-Pesa environment variables: {', '.join(missing_fields)}")
+
+
 class MpesaService:
     def __init__(self):
         self.sandbox_base_url = "https://sandbox.safaricom.co.ke"
         self.production_base_url = "https://api.safaricom.co.ke"
+        self._config = None
     
-    async def get_configuration(self, db: AsyncSession) -> Optional[MpesaConfiguration]:
-        """Get active M-Pesa configuration"""
-        query = select(MpesaConfiguration).where(MpesaConfiguration.is_active == True)
-        result = await db.execute(query)
-        return result.scalar_one_or_none()
+    @property
+    def config(self):
+        """Lazy load configuration"""
+        if self._config is None:
+            self._config = MpesaConfig()
+        return self._config
     
-    async def get_access_token(self, config: MpesaConfiguration) -> str:
+    async def get_access_token(self) -> str:
         """Generate OAuth access token for M-Pesa API"""
-        base_url = self.sandbox_base_url if config.environment == "sandbox" else self.production_base_url
+        base_url = self.sandbox_base_url if self.config.environment == "sandbox" else self.production_base_url
         
         # Create credentials
-        credentials = f"{config.consumer_key}:{config.consumer_secret}"
+        credentials = f"{self.config.consumer_key}:{self.config.consumer_secret}"
         encoded_credentials = base64.b64encode(credentials.encode()).decode()
         
         headers = {
@@ -49,24 +85,48 @@ class MpesaService:
         
         url = f"{base_url}/oauth/v1/generate?grant_type=client_credentials"
         
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url, headers=headers)
-            
-        if response.status_code == 200:
-            token_data = response.json()
-            return token_data["access_token"]
-        else:
-            raise Exception(f"Failed to get access token: {response.text}")
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                response = await client.get(url, headers=headers)
+                
+            if response.status_code == 200:
+                token_data = response.json()
+                return token_data["access_token"]
+            else:
+                raise Exception(f"Failed to get access token: {response.text}")
+        except httpx.RequestError as e:
+            raise Exception(f"Network error getting access token: {str(e)}")
     
-    async def generate_password(self, config: MpesaConfiguration) -> tuple[str, str]:
+    async def generate_password(self) -> tuple[str, str]:
         """Generate timestamp and password for STK Push"""
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         
         # Password = Base64(BusinessShortCode + Passkey + Timestamp)
-        password_string = f"{config.business_short_code}{config.lipa_na_mpesa_passkey}{timestamp}"
+        password_string = f"{self.config.business_short_code}{self.config.lipa_na_mpesa_passkey}{timestamp}"
         password = base64.b64encode(password_string.encode()).decode()
         
         return timestamp, password
+    
+    def validate_phone_number(self, phone: str) -> str:
+        """Ensure phone number is in correct format (254XXXXXXXXX)"""
+        import re
+        
+        # Remove any spaces, dashes, or plus signs
+        clean_phone = re.sub(r'[\s\-\+]', '', phone)
+        
+        # Convert 07XX to 2547XX format
+        if clean_phone.startswith('07'):
+            clean_phone = '254' + clean_phone[1:]
+        elif clean_phone.startswith('7'):
+            clean_phone = '254' + clean_phone
+        elif not clean_phone.startswith('254'):
+            raise ValueError("Invalid phone number format. Use format: 254XXXXXXXXX")
+        
+        # Validate length (should be 12 digits: 254XXXXXXXXX)
+        if len(clean_phone) != 12:
+            raise ValueError("Invalid phone number length. Should be 12 digits: 254XXXXXXXXX")
+            
+        return clean_phone
     
     async def initiate_stk_push(
         self, 
@@ -76,90 +136,104 @@ class MpesaService:
     ) -> Dict[str, Any]:
         """Initiate STK Push (Lipa Na M-Pesa Online)"""
         
-        # Get configuration
-        config = await self.get_configuration(db)
-        if not config:
-            raise Exception("M-Pesa configuration not found")
-        
-        # Get access token
-        access_token = await self.get_access_token(config)
-        
-        # Generate timestamp and password
-        timestamp, password = await self.generate_password(config)
-        
-        # Prepare API request
-        base_url = self.sandbox_base_url if config.environment == "sandbox" else self.production_base_url
-        url = f"{base_url}/mpesa/stkpush/v1/processrequest"
-        
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/json"
-        }
-        
-        payload = {
-            "BusinessShortCode": config.business_short_code,
-            "Password": password,
-            "Timestamp": timestamp,
-            "TransactionType": "CustomerPayBillOnline",
-            "Amount": int(request.amount),  # M-Pesa expects integer
-            "PartyA": request.phone_number,
-            "PartyB": config.business_short_code,
-            "PhoneNumber": request.phone_number,
-            "CallBackURL": config.callback_url,
-            "AccountReference": request.account_reference or f"ORDER_{order_id}" if order_id else "PAYMENT",
-            "TransactionDesc": request.transaction_desc
-        }
-        
-        # Make API request
-        async with httpx.AsyncClient() as client:
-            response = await client.post(url, headers=headers, json=payload)
-        
-        response_data = response.json()
-        
-        # Create transaction record
-        transaction_data = MpesaTransactionCreate(
-            phone_number=request.phone_number,
-            amount=request.amount,
-            transaction_type=MpesaTransactionType.C2B,
-            order_id=order_id,
-            account_reference=request.account_reference,
-            transaction_desc=request.transaction_desc
-        )
-        
-        transaction = await self.create_transaction(transaction_data, db)
-        
-        if response.status_code == 200 and response_data.get("ResponseCode") == "0":
-            # Update transaction with M-Pesa response
-            update_data = MpesaTransactionUpdate(
-                merchant_request_id=response_data.get("MerchantRequestID"),
-                checkout_request_id=response_data.get("CheckoutRequestID"),
-                transaction_status=MpesaTransactionStatus.PENDING
-            )
+        try:
+            # Validate phone number
+            validated_phone = self.validate_phone_number(request.phone_number)
             
-            await self.update_transaction(transaction.id, update_data, db)
+            # Get access token
+            access_token = await self.get_access_token()
             
-            return {
-                "success": True,
-                "message": "STK Push initiated successfully",
-                "transaction_id": transaction.id,
-                "checkout_request_id": response_data.get("CheckoutRequestID"),
-                "merchant_request_id": response_data.get("MerchantRequestID"),
-                "customer_message": response_data.get("CustomerMessage")
+            # Generate timestamp and password
+            timestamp, password = await self.generate_password()
+            
+            # Prepare API request
+            base_url = self.sandbox_base_url if self.config.environment == "sandbox" else self.production_base_url
+            url = f"{base_url}/mpesa/stkpush/v1/processrequest"
+            
+            headers = {
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json"
             }
-        else:
-            # Update transaction as failed
-            update_data = MpesaTransactionUpdate(
-                transaction_status=MpesaTransactionStatus.FAILED,
-                result_desc=response_data.get("ResponseDescription", "STK Push failed")
+            
+            payload = {
+                "BusinessShortCode": self.config.business_short_code,
+                "Password": password,
+                "Timestamp": timestamp,
+                "TransactionType": "CustomerPayBillOnline",
+                "Amount": int(request.amount),  # M-Pesa expects integer
+                "PartyA": validated_phone,
+                "PartyB": self.config.business_short_code,
+                "PhoneNumber": validated_phone,
+                "CallBackURL": self.config.callback_url,
+                "AccountReference": request.account_reference or f"ORDER_{order_id}" if order_id else "PAYMENT",
+                "TransactionDesc": request.transaction_desc
+            }
+            
+            # Create transaction record first
+            transaction_data = MpesaTransactionCreate(
+                phone_number=validated_phone,
+                amount=request.amount,
+                transaction_type=MpesaTransactionType.C2B,
+                order_id=order_id,
+                account_reference=request.account_reference,
+                transaction_desc=request.transaction_desc
             )
             
-            await self.update_transaction(transaction.id, update_data, db)
+            transaction = await self.create_transaction(transaction_data, db)
             
+            # Make API request
+            async with httpx.AsyncClient(timeout=30) as client:
+                response = await client.post(url, headers=headers, json=payload)
+            
+            response_data = response.json()
+            
+            if response.status_code == 200 and response_data.get("ResponseCode") == "0":
+                # Update transaction with M-Pesa response
+                update_data = MpesaTransactionUpdate(
+                    merchant_request_id=response_data.get("MerchantRequestID"),
+                    checkout_request_id=response_data.get("CheckoutRequestID"),
+                    transaction_status=MpesaTransactionStatus.PENDING
+                )
+                
+                await self.update_transaction(transaction.id, update_data, db)
+                
+                return {
+                    "success": True,
+                    "message": "STK Push initiated successfully",
+                    "transaction_id": transaction.id,
+                    "checkout_request_id": response_data.get("CheckoutRequestID"),
+                    "merchant_request_id": response_data.get("MerchantRequestID"),
+                    "customer_message": response_data.get("CustomerMessage", "Please enter your M-Pesa PIN to complete the payment")
+                }
+            else:
+                # Update transaction as failed
+                update_data = MpesaTransactionUpdate(
+                    transaction_status=MpesaTransactionStatus.FAILED,
+                    result_desc=response_data.get("ResponseDescription", "STK Push failed")
+                )
+                
+                await self.update_transaction(transaction.id, update_data, db)
+                
+                return {
+                    "success": False,
+                    "message": response_data.get("ResponseDescription", "STK Push failed"),
+                    "transaction_id": transaction.id,
+                    "error_code": response_data.get("ResponseCode")
+                }
+                
+        except ValueError as e:
+            # Handle validation errors (like phone number format)
             return {
                 "success": False,
-                "message": response_data.get("ResponseDescription", "STK Push failed"),
-                "transaction_id": transaction.id,
-                "error_code": response_data.get("ResponseCode")
+                "message": str(e),
+                "error_code": "VALIDATION_ERROR"
+            }
+        except Exception as e:
+            # Handle other errors
+            return {
+                "success": False,
+                "message": f"Failed to initiate STK Push: {str(e)}",
+                "error_code": "SYSTEM_ERROR"
             }
     
     async def query_transaction_status(
@@ -169,59 +243,63 @@ class MpesaService:
     ) -> Dict[str, Any]:
         """Query the status of an STK Push transaction"""
         
-        config = await self.get_configuration(db)
-        if not config:
-            raise Exception("M-Pesa configuration not found")
-        
-        access_token = await self.get_access_token(config)
-        timestamp, password = await self.generate_password(config)
-        
-        base_url = self.sandbox_base_url if config.environment == "sandbox" else self.production_base_url
-        url = f"{base_url}/mpesa/stkpushquery/v1/query"
-        
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/json"
-        }
-        
-        payload = {
-            "BusinessShortCode": config.business_short_code,
-            "Password": password,
-            "Timestamp": timestamp,
-            "CheckoutRequestID": checkout_request_id
-        }
-        
-        async with httpx.AsyncClient() as client:
-            response = await client.post(url, headers=headers, json=payload)
-        
-        response_data = response.json()
-        
-        # Update local transaction record
-        transaction = await self.get_transaction_by_checkout_id(checkout_request_id, db)
-        if transaction:
-            if response_data.get("ResultCode") == "0":
-                status = MpesaTransactionStatus.SUCCESS
-            elif response_data.get("ResultCode") == "1032":
-                status = MpesaTransactionStatus.CANCELLED
-            elif response_data.get("ResultCode") == "1037":
-                status = MpesaTransactionStatus.TIMEOUT
-            else:
-                status = MpesaTransactionStatus.FAILED
+        try:
+            access_token = await self.get_access_token()
+            timestamp, password = await self.generate_password()
             
-            update_data = MpesaTransactionUpdate(
-                transaction_status=status,
-                result_code=response_data.get("ResultCode"),
-                result_desc=response_data.get("ResultDesc")
-            )
+            base_url = self.sandbox_base_url if self.config.environment == "sandbox" else self.production_base_url
+            url = f"{base_url}/mpesa/stkpushquery/v1/query"
             
-            await self.update_transaction(transaction.id, update_data, db)
-        
-        return {
-            "success": response.status_code == 200,
-            "status": response_data.get("ResultDesc"),
-            "result_code": response_data.get("ResultCode"),
-            "transaction": transaction
-        }
+            headers = {
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json"
+            }
+            
+            payload = {
+                "BusinessShortCode": self.config.business_short_code,
+                "Password": password,
+                "Timestamp": timestamp,
+                "CheckoutRequestID": checkout_request_id
+            }
+            
+            async with httpx.AsyncClient(timeout=30) as client:
+                response = await client.post(url, headers=headers, json=payload)
+            
+            response_data = response.json()
+            
+            # Update local transaction record
+            transaction = await self.get_transaction_by_checkout_id(checkout_request_id, db)
+            if transaction:
+                if response_data.get("ResultCode") == "0":
+                    status = MpesaTransactionStatus.SUCCESS
+                elif response_data.get("ResultCode") == "1032":
+                    status = MpesaTransactionStatus.CANCELLED
+                elif response_data.get("ResultCode") == "1037":
+                    status = MpesaTransactionStatus.TIMEOUT
+                else:
+                    status = MpesaTransactionStatus.FAILED
+                
+                update_data = MpesaTransactionUpdate(
+                    transaction_status=status,
+                    result_code=response_data.get("ResultCode"),
+                    result_desc=response_data.get("ResultDesc")
+                )
+                
+                await self.update_transaction(transaction.id, update_data, db)
+            
+            return {
+                "success": response.status_code == 200,
+                "status": response_data.get("ResultDesc"),
+                "result_code": response_data.get("ResultCode"),
+                "transaction": transaction
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"Failed to query transaction status: {str(e)}",
+                "error_code": "SYSTEM_ERROR"
+            }
     
     async def process_callback(
         self, 
@@ -229,6 +307,8 @@ class MpesaService:
         db: AsyncSession
     ) -> bool:
         """Process M-Pesa STK Push callback"""
+        
+        callback_record = None
         
         try:
             # Extract callback information
@@ -318,8 +398,9 @@ class MpesaService:
             return True
             
         except Exception as e:
-            callback_record.processing_error = str(e)
-            await db.commit()
+            if callback_record:
+                callback_record.processing_error = str(e)
+                await db.commit()
             return False
     
     async def create_transaction(

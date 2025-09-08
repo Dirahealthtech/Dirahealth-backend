@@ -59,6 +59,9 @@ class MpesaQueryRequest(BaseModel):
     checkout_request_id: str
 
 
+    
+
+
 # Callback Schemas
 class MpesaCallbackResponse(BaseModel):
     merchant_request_id: str
