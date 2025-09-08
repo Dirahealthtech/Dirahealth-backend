@@ -60,20 +60,25 @@ app = FastAPI(
     ]
 )
 
-# Add middleware
-app.add_middleware(CustomAuthMiddleWare)    # custom authentication middleware
+# Add CORS middleware first
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         'http://localhost', 
         'http://localhost:3000',
-        'https://app.dirahealthtech.co.ke',  # Added production domain
-        'https://dirahealthtech.co.ke',      # Added root domain if needed
+        'https://app.dirahealthtech.co.ke',  # Backend domain
+        'https://dirahealthtech.co.ke',      # Root domain
+        'https://www.dirahealthtech.co.ke',  # WWW version
+        # Add your frontend domain here if it's different
+        # 'https://your-frontend-domain.com',
     ],
     allow_credentials=True,
     allow_methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allow_headers=["*"],
 )
+
+# Add custom auth middleware after CORS (order matters!)
+app.add_middleware(CustomAuthMiddleWare)    # custom authentication middleware
 
 # Register endpoints
 app.include_router(auth_router, prefix=f'/api/{api_version}/auth', tags=["Authentication"])
